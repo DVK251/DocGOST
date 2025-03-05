@@ -29,6 +29,7 @@ using Microsoft.Win32;
 using DocGOST.Data;
 using System.Windows.Media;
 using iTextSharp.text.pdf.parser;
+using DocGOST.Utils;
 
 namespace DocGOST
 {
@@ -1450,9 +1451,9 @@ namespace DocGOST
                 waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
-
-
         }
+
+
 
         /// <summary> Импорт данных из проекта KiCad </summary>
         private void ImportPrjfromKiCad(string pcbPrjFilePath)
@@ -2212,43 +2213,485 @@ namespace DocGOST
 
         }
 
+        void ShowError(string text) {
+            MessageBox.Show(text, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void ImportPrjfromMentor_Click(object sender, RoutedEventArgs e) {
+            waitMessageLabel.Content = "Подождите, импорт данных...";
+            waitGrid.Visibility = Visibility.Visible;
+
+            OpenFileDialog openDlg = new OpenFileDialog();
+            openDlg.Title = "Выбор CSV-файла, экспортированного из Mentor";
+            openDlg.Multiselect = false;
+            openDlg.Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"; // _DDD check
+            if (openDlg.ShowDialog() == true) {
+                string pcbPrjFilePath = openDlg.FileName;
+                try { 
+                    ImportPrjfromMentorCsv(pcbPrjFilePath);
+                } catch (Exception ex) {
+                    ShowError(ex.Message);
+                }
+                waitMessageLabel.Content = "Пожалуйста, подождите...";
+                waitGrid.Visibility = Visibility.Hidden;
+            } else {
+                waitMessageLabel.Content = "Пожалуйста, подождите...";
+                waitGrid.Visibility = Visibility.Hidden;
+            }
+        }
+
+        private void ImportPrjfromMentorCsv(string pcbPrjFilePath) {
+            const int HDR_LINE_CNT = 13;
+            const int HDR_IDX_SHIFR = 4; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
+            //const int HDR_IDX_SCH_NAME = 2; // Имя схемы
+            //const int HDR_IDX_ISPOLNITEL = 6; // Исполнитель
+            //const int HDR_IDX_UTVERDIL = 8; // Утвердил
+            //const int HDR_IDX_NORMOKONTROL = 9; // Нормоконтроль
+            
+            const int LINE_PARAM_CNT = 9;
+            const int LINE_PIDX_N = 0; // индекс колонки (0+) внутри строки основной части CSV-файла, в которой располагается порядковый номер
+            const int LINE_PIDX_PART_NUMBER = 1;
+            //const int LINE_PIDX_VALUE = 2;
+            //const int LINE_PIDX_QTY = 3;
+            const int LINE_PIDX_REFDES = 4;
+            const int LINE_PIDX_MANUFACTURER = 5;
+            const int LINE_PIDX_PN = 6;
+            const int LINE_PIDX_TU = 7;
+            //const int LINE_PIDX_AUX = 8;
+
+            perTempSave = new TempSaves();
+            specTempSave = new TempSaves();
+            vedomostTempSave = new TempSaves();
+
+            List<DielProperties> pcbMaterialsList = new List<DielProperties>();
+
+            #region Открытие и парсинг файла проекта Mentor
+            int numberOfStrings = 0;
+
+            List<List<ComponentProperties>> componentsList = new List<List<ComponentProperties>>();
+
+            List<List<List<ComponentProperties>>> componentsVariantList = new List<List<List<ComponentProperties>>>();
+            List<List<ComponentProperties>> componentsPropVariantList = new List<List<ComponentProperties>>();
+            List<ComponentProperties> componentVariantPropList = new List<ComponentProperties>();
+            List<String> variantNameList = new List<String>();
+            List<String> dnfDesignatorsList = new List<String>();
+            List<List<String>> dnfVariantDesignatorsList = new List<List<String>>();
+            List<String> fittedDesignatorsList = new List<String>();
+            List<List<String>> fittedVariantDesignatorsList = new List<List<String>>();
+
+            List<List<string[]>> prjParamsVariantList = new List<List<string[]>>();
+
+
+            variantNameList.Add("No Variations");
+            //bool isWaitingVariantDescription = false;
+
+            List<ComponentProperties> otherPropList = new List<ComponentProperties>();
+
+            SpecificationItem plataSpecItem = new SpecificationItem(); //для хранения записи печатной платы для добавления в раздел "Детали" или "Сборочные единицы" спецификации
+
+            plataSpecItem.position = "Авто";
+            plataSpecItem.name = "Плата печатная";
+            plataSpecItem.quantity = "1";
+            int pcbLayersCount = 2;
+            const string designatorName = "Ref Designator";
+            const string nameName = "Part Number"; 
+            const string documName = "Docum";
+            const string noteName = "Note";
+
+            //int currentVariant = 0;
+            string[] HeaderInfo = new string[HDR_LINE_CNT];
+
+            using (var dataFile = new CsvReader(pcbPrjFilePath, '\t')) {
+                try { 
+                    for (int i = 0; i < HDR_LINE_CNT; i++) {
+                        var s = dataFile.ReadLine();
+                        var pos = s.IndexOf(':');
+                        if (pos == -1)
+                            throw new Exception("Не найден символ ':'");
+                        HeaderInfo[i] = s.Substring(pos + 1).Trim();
+                    }
+                    string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
+                    CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
+
+                    while (!dataFile.Eof()) {
+                        SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
+                        SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
+                        var componentPropList = new List<ComponentProperties>() {
+                            new ComponentProperties() {
+                                Name = nameName,
+                                Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
+                            },
+                            new ComponentProperties() {
+                                Name = designatorName,
+                                Text = SA[LINE_PIDX_REFDES]
+                            },
+                            new ComponentProperties() {
+                                Name = documName,
+                                Text = ""
+                            },
+                            new ComponentProperties() {
+                                Name = noteName,
+                                Text = SA[LINE_PIDX_MANUFACTURER]
+                            }
+                        };
+                        componentsList.Add(componentPropList);
+                        numberOfStrings++;
+                    }
+                } catch (Exception ex) {
+                    throw new Exception(dataFile.MakeExceptionString(ex.Message));
+                }
+            }
+            #endregion
+
+            string PrjShifr = HeaderInfo[HDR_IDX_SHIFR];
+            string PcbShifr = "<PcbShifr>";
+            {
+                var idx = PrjShifr.IndexOf(' ');
+                if (idx >= 0) PrjShifr = PrjShifr.Substring(0, idx);
+            }
+
+            #region Заполнение списков для базы данных проекта
+            createPdfMenuItem.IsEnabled = true;
+
+            List<PerechenItem> perechenList = new List<PerechenItem>();
+            List<SpecificationItem> specList = new List<SpecificationItem>();
+            List<VedomostItem> vedomostList = new List<VedomostItem>();
+            List<PcbSpecificationItem> pcbSpecList = new List<PcbSpecificationItem>();
+
+            int numberOfValidStrings = 0;
+
+            SpecificationItem tempSpecItem = new SpecificationItem();
+            numberOfValidStrings++;
+            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            tempSpecItem.format = "А3";
+            tempSpecItem.oboznachenie = PrjShifr + " СБ";
+            tempSpecItem.name = "Сборочный чертёж";
+            tempSpecItem.quantity = String.Empty;
+            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+            specList.Add(tempSpecItem);
+
+            tempSpecItem = new SpecificationItem();
+            numberOfValidStrings++;
+            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            tempSpecItem.format = "А3";
+            tempSpecItem.oboznachenie = PrjShifr + " Э3";
+            tempSpecItem.name = "Схема электрическая принципиальная";
+            tempSpecItem.quantity = String.Empty;
+            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+            specList.Add(tempSpecItem);
+
+            tempSpecItem = new SpecificationItem();
+            numberOfValidStrings++;
+            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            tempSpecItem.format = "А4";
+            tempSpecItem.oboznachenie = PrjShifr + " ПЭ3";
+            tempSpecItem.name = "Перечень элементов";
+            tempSpecItem.quantity = String.Empty;
+            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+            specList.Add(tempSpecItem);
+
+            plataSpecItem.oboznachenie = PcbShifr;
+            plataSpecItem.name = "Плата печатная";
+
+            tempSpecItem = new SpecificationItem();
+            numberOfValidStrings++;
+            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            tempSpecItem.format = "А3";
+            tempSpecItem.oboznachenie = PrjShifr + " ВП";
+            tempSpecItem.name = "Ведомость покупных изделий";
+            tempSpecItem.quantity = String.Empty;
+            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+            specList.Add(tempSpecItem);
+
+            /*tempSpecItem = new SpecificationItem();
+            numberOfValidStrings++;
+            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            tempSpecItem.format = "*)";
+            tempSpecItem.oboznachenie = importPcbPrjWindow.prjNumberTextBox.Text + " Д33";
+            tempSpecItem.name = "Данные проектирования модуля";
+            tempSpecItem.quantity = String.Empty;
+            tempSpecItem.note = "*) CD-диск";
+            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+            specList.Add(tempSpecItem);*/
+
+            project = new Data.ProjectDB(projectPath);
+
+            PcbSpecificationItem tempPcbSpecItem = new PcbSpecificationItem();
+            tempPcbSpecItem.id = id.makeID(1, specTempSave.GetCurrent());
+            tempPcbSpecItem.format = "А1";
+            tempPcbSpecItem.oboznachenie = PcbShifr + " СБ";
+            tempPcbSpecItem.name = "Сборочный чертёж";
+            tempPcbSpecItem.quantity = String.Empty;
+            tempPcbSpecItem.spSection = (int)Global.SpSections.Documentation;
+            pcbSpecList.Add(tempPcbSpecItem);
+
+            tempPcbSpecItem = new PcbSpecificationItem();
+            tempPcbSpecItem.id = id.makeID(2, specTempSave.GetCurrent());
+            tempPcbSpecItem.format = "*)";
+            tempPcbSpecItem.oboznachenie = PcbShifr + " Т5М";
+            tempPcbSpecItem.name = "Данные проектирования";
+            tempPcbSpecItem.quantity = String.Empty;
+            tempPcbSpecItem.note = "*) CD-диск";
+            tempPcbSpecItem.spSection = (int)Global.SpSections.Documentation;
+            pcbSpecList.Add(tempPcbSpecItem);
+
+            int index = 3;
+            int coreQuantity = 0; //кол-во ядер в стеке платы
+            foreach (DielProperties pcbMaterialItem in pcbMaterialsList) {
+                tempPcbSpecItem = new PcbSpecificationItem();
+                tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
+                tempPcbSpecItem.format = String.Empty;
+                tempPcbSpecItem.position = "Авто";
+                tempPcbSpecItem.oboznachenie = String.Empty;
+                string name = String.Empty;
+                if (pcbMaterialItem.DielType == 1) {
+                    coreQuantity += pcbMaterialItem.Quantity;
+                    name = "Стеклотекстолит ";
+                } else name = "Препрег ";
+                name += pcbMaterialItem.Name + " ";
+                name += pcbMaterialItem.Height + " мм";
+                tempPcbSpecItem.name = name;
+                tempPcbSpecItem.quantity = pcbMaterialItem.Quantity.ToString();
+                tempPcbSpecItem.note = String.Empty;
+                tempPcbSpecItem.spSection = (int)Global.SpSections.Materials;
+                pcbSpecList.Add(tempPcbSpecItem);
+                index++;
+            }
+
+            int additionalCopperLayersCount = pcbLayersCount - coreQuantity * 2;
+            if (additionalCopperLayersCount > 0) {
+                tempPcbSpecItem = new PcbSpecificationItem();
+                tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
+                tempPcbSpecItem.format = String.Empty;
+                tempPcbSpecItem.position = "Авто";
+                tempPcbSpecItem.oboznachenie = String.Empty;
+                tempPcbSpecItem.name = "Фольга медная толщиной 18 мкм";
+                tempPcbSpecItem.quantity = additionalCopperLayersCount.ToString();
+                tempPcbSpecItem.note = String.Empty;
+                tempPcbSpecItem.spSection = (int)Global.SpSections.Materials;
+                pcbSpecList.Add(tempPcbSpecItem);
+            }
+
+
+            OsnNadpisItem osnNadpisItem = new OsnNadpisItem();
+
+
+            DisplayPcbSpecValues(pcbSpecList);
+            //Сохраняем спецификацию для ПП в БД, потому что она не требует сортировки
+            for (int i = 0; i < pcbSpecList.Count; i++) {
+                PcbSpecificationItem sd = pcbSpecList[i];
+                sd.id = id.makeID(i + 1, pcbSpecTempSave.GetCurrent());
+                project.AddPcbSpecItem(sd);
+            }
+
+            osnNadpisItem.grapha = "2";
+            osnNadpisItem.specificationValue = PrjShifr;
+            osnNadpisItem.perechenValue = osnNadpisItem.specificationValue + " ПЭ3";
+            osnNadpisItem.vedomostValue = osnNadpisItem.specificationValue + " ВП";
+            osnNadpisItem.pcbSpecificationValue = PcbShifr;
+            project.SaveOsnNadpisItem(osnNadpisItem);
+
+            osnNadpisItem.grapha = "25";
+            osnNadpisItem.specificationValue = String.Empty;
+            osnNadpisItem.perechenValue = PrjShifr; //Для перечня здесь указываем спецификацию
+            osnNadpisItem.vedomostValue = PrjShifr; //Для ведомости здесь указываем спецификацию
+            osnNadpisItem.pcbSpecificationValue = PrjShifr; //Для спецификации ПП здесь указываем спецификацию
+            project.SaveOsnNadpisItem(osnNadpisItem);
+
+            numberOfValidStrings++;
+            plataSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+            specList.Add(plataSpecItem);
+
+            #region Сохранение выбранных наименований свойств комопонентов в SettingsDB
+            var propNameItem = new SettingsItem();
+            var settingsDB = new SettingsDB();
+
+            propNameItem.name = "designatorPropName";
+            propNameItem.valueString = designatorName;
+            settingsDB.SaveSettingItem(propNameItem);
+
+            propNameItem.name = "namePropName";
+            propNameItem.valueString = nameName;
+            settingsDB.SaveSettingItem(propNameItem);
+
+            propNameItem.name = "documPropName";
+            propNameItem.valueString = documName;
+            settingsDB.SaveSettingItem(propNameItem);
+
+            propNameItem.name = "notePropName";
+            propNameItem.valueString = noteName;
+            settingsDB.SaveSettingItem(propNameItem);
+            #endregion
+
+            for (int i = 0; i < numberOfStrings; i++) {
+                PerechenItem tempPerechen = new PerechenItem();
+                SpecificationItem tempSpecification = new SpecificationItem();
+                VedomostItem tempVedomost = new VedomostItem();
+                PcbSpecificationItem tempPcbSpecification = new PcbSpecificationItem();
+
+                numberOfValidStrings++;
+                tempPerechen.id = id.makeID(numberOfValidStrings, perTempSave.GetCurrent());
+                tempPerechen.designator = string.Empty;
+                tempPerechen.name = string.Empty;
+                tempPerechen.quantity = "1";
+
+                tempPerechen.docum = string.Empty;
+                tempPerechen.type = string.Empty;
+                tempPerechen.group = string.Empty;
+                tempPerechen.groupPlural = string.Empty;
+                tempPerechen.isNameUnderlined = false;
+                tempPerechen.note = string.Empty;
+
+                for (int j = 0; j < (componentsList[i]).Count; j++) {
+                    ComponentProperties prop;
+                    try {
+                        prop = (componentsList[i])[j];
+
+                        if (prop.Name == designatorName) tempPerechen.designator = prop.Text;
+
+                        else if (prop.Name == nameName) tempPerechen.name = prop.Text;
+                        else if (prop.Name == documName) tempPerechen.docum = prop.Text;
+                        else if (prop.Name == noteName) tempPerechen.note = prop.Text;
+                    } catch {
+                        MessageBox.Show(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + numberOfStrings);
+                    }
+                }
+
+                /*if (isDNF == false)*/ {
+
+                    tempSpecification.id = tempPerechen.id;
+                    tempSpecification.spSection = (int)Global.SpSections.Other;
+                    tempSpecification.format = String.Empty;
+                    tempSpecification.zona = String.Empty;
+                    tempSpecification.position = String.Empty;
+                    tempSpecification.oboznachenie = String.Empty;
+                    tempSpecification.name = tempPerechen.name;
+                    tempSpecification.quantity = "1";
+                    tempSpecification.note = tempPerechen.designator;
+                    tempSpecification.group = String.Empty;
+                    tempSpecification.docum = tempPerechen.docum;
+                    tempSpecification.designator = tempPerechen.designator;
+                    tempSpecification.isNameUnderlined = false;
+
+                    tempVedomost.id = tempPerechen.id;
+                    tempVedomost.designator = tempPerechen.designator;
+                    tempVedomost.name = tempPerechen.name;
+                    tempVedomost.kod = String.Empty;
+                    tempVedomost.docum = tempPerechen.docum;
+                    tempVedomost.supplier = String.Empty;
+                    tempVedomost.belongs = String.Empty;
+                    tempVedomost.quantityIzdelie = "1";
+                    tempVedomost.quantityComplects = String.Empty;
+                    tempVedomost.quantityTotal = "1";
+                    tempVedomost.note = tempPerechen.note;
+                    tempVedomost.isNameUnderlined = false;
+
+
+
+                    string group = string.Empty;
+                    DesignatorDB designDB = new DesignatorDB();
+                    int descrDBLength = designDB.GetLength();
+
+                    for (int j = 0; j < descrDBLength; j++) {
+                        DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
+
+                        if (tempPerechen.designator.Length >= 2)
+                            if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2))) {
+                                tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
+                                tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
+
+                                group = tempPerechen.group;
+
+                                tempSpecification.group = group;
+                                tempPcbSpecification.group = group;
+                                tempVedomost.group = group;
+                                tempVedomost.groupPlural = tempPerechen.groupPlural;
+                            }
+                    }
+
+
+                    tempSpecification.name = group + " " + tempSpecification.name + " " + tempSpecification.docum;
+
+                    perechenList.Add(tempPerechen);
+                    specList.Add(tempSpecification);
+                    vedomostList.Add(tempVedomost);
+                } /*else {
+                    numberOfValidStrings--;
+                }*/
+
+
+            } // for
+
+            //Сортировка по поз. обозначению
+            List<PerechenItem> perechenListSorted = new List<PerechenItem>();
+            List<SpecificationItem> specOtherListSorted = new List<SpecificationItem>();
+            List<VedomostItem> vedomostListSorted = new List<VedomostItem>();
+
+            perechenListSorted = perechenList.OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
+            specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
+            vedomostListSorted = vedomostList.OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
+
+            for (int i = 0; i < specOtherListSorted.Count; i++) {
+                perechenListSorted[i].id = id.makeID(i + 1, perTempSave.GetCurrent());
+                specOtherListSorted[i].id = id.makeID(i + 1 + (numberOfValidStrings - specOtherListSorted.Count), specTempSave.GetCurrent());
+                vedomostListSorted[i].id = id.makeID(i + 1, vedomostTempSave.GetCurrent());
+            }
+
+            saveProjectMenuItem.IsEnabled = true;
+            undoMenuItem.IsEnabled = true;
+            redoMenuItem.IsEnabled = true;
+            #endregion
+            groupByName(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+
+            //waitGrid.Visibility = Visibility.Hidden;
+
+        }
+
 
         /// <summary> Формирование числа типа int для правильной сортировки позиционных обозначений,
         /// так как в случае простой сортировки по алфавиту результат неправильный, например,
         /// сортируется C1, C15, C2 вместо C1, C2, C15.<</summary>
-        private int MakeDesignatorForOrdering(string designator)
+        private long MakeDesignatorForOrdering(string designator)
         {
-            int result = 0;
-            if (designator.Length > 1)
-            {                
-                if (Char.IsDigit(designator[1]))
-                {
-                    result = ((designator[0]) << 24) + int.Parse(designator.Substring(1, designator.Length - 1));
-                }
-                else if (designator[1] == '?')
-                {
-                    result = ((designator[0]) << 24) + 0;
-                    MessageBox.Show("В схеме есть не пронумерованный компонент " + designator);
-                }
-                else if (Char.IsDigit(designator[2]))
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(2, designator.Length - 2));
-                }
-                else if (designator[2] == '?')
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + 0;
-                    MessageBox.Show("В схеме есть не пронумерованный компонент " + designator);
-                }
-                else if (Char.IsDigit(designator[3])) //Для комонентов с обозначением из 3 букв, например, "PCB1"
-                {
-                    if (designator.Length >= 4)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(3, designator.Length - 3));
-                }
-                
+            int IntShowError() {
+                ShowError($"Не удаётся распознать позиционное обозначение '{designator}'");
+                return 0;
             }
 
+            // C15, 1C15, C1-15
+            long result = 0;
+            int idx = 0;
+            int des_len = designator.Length;
+            int prefix = 0;
+            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                prefix = prefix * 10 + (designator[idx] - '0');
+            int des_start = idx;
+            for (; idx < des_len && !Char.IsDigit(designator[idx]); idx++)
+                if (!Char.IsLetter(designator[idx]))
+                    return IntShowError();
+            int dl = idx - des_start;
+            if (dl == 0 || dl > 3)
+                return IntShowError();
+            for (int i = 0; i < dl; ++i) {
+                result += (long)((byte)designator[des_start + i]) << (56 - (i * 8));
+            }
+            int suffix = 0;
+            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                suffix = suffix * 10 + (designator[idx] - '0');
+            if (suffix == 0)
+                return IntShowError();
+            if (idx < des_len) {
+                if (prefix != 0 || designator[idx] != '-')
+                    return IntShowError();
+                idx++;
+                prefix = suffix;
+                suffix = 0;
+                for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                    suffix = suffix * 10 + (designator[idx] - '0');
+                if (suffix == 0 || idx < des_len)
+                    return IntShowError();
+            }
+            result += (prefix << 16) + suffix;
             return result;
         }
 

@@ -36,6 +36,8 @@
                 <MenuItem x:Name="importMenuItem" Header="Импорт данных" IsEnabled="False">
                     <MenuItem x:Name="importPrjPcbfromADMenuItem" Header="Altium Designer" Click="ImportPrjPcbfromAD_Click"></MenuItem>
                     <MenuItem x:Name="importPrjfromKiCadMenuItem" Header="KiCad" Click="ImportPrjfromKiCad_Click"></MenuItem>
+                    <Separator />
+                    <MenuItem x:Name="importPrjfromMentorMenuItem" Header="Mentor Csv" Click="ImportPrjfromMentor_Click"></MenuItem>
                 </MenuItem>
                 <Separator />
                 <MenuItem x:Name="createPdfMenuItem" Header="Экспорт в pdf" IsEnabled="False" Click="CreatePdf_Click" />
