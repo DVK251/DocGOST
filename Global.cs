@@ -18,6 +18,8 @@
  * 
  */
 
+using System;
+
 namespace DocGOST
 {
     public class Global
@@ -58,6 +60,48 @@ namespace DocGOST
             return (id >> TempStartPos);
         }
 
+        public static long GetDesignatorValue(string designator, Action<string> OnError = null) {
+            long IntOnError() {
+                OnError?.Invoke($"Не удаётся распознать позиционное обозначение '{designator}'");
+                return 0;
+            }
 
+            // C15, 1C15, C1-15
+            if (designator == "") return 0;
+            long result = 0;
+            int idx = 0;
+            int des_len = designator.Length;
+            int prefix = 0;
+            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                prefix = prefix * 10 + (designator[idx] - '0');
+            int des_start = idx;
+            for (; idx < des_len && !Char.IsDigit(designator[idx]); idx++)
+                if (!Char.IsLetter(designator[idx]))
+                    return IntOnError();
+            int dl = idx - des_start;
+            if (dl == 0 || dl > 3)
+                return IntOnError();
+            for (int i = 0; i < dl; ++i) {
+                result += (long)((byte)designator[des_start + i]) << (56 - (i * 8));
+            }
+            int suffix = 0;
+            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                suffix = suffix * 10 + (designator[idx] - '0');
+            if (suffix == 0)
+                return IntOnError();
+            if (idx < des_len) {
+                if (prefix != 0 || designator[idx] != '-')
+                    return IntOnError();
+                idx++;
+                prefix = suffix;
+                suffix = 0;
+                for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
+                    suffix = suffix * 10 + (designator[idx] - '0');
+                if (suffix == 0 || idx < des_len)
+                    return IntOnError();
+            }
+            result += (prefix << 16) + suffix;
+            return result;
+        }
     }
 }

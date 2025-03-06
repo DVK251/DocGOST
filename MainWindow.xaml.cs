@@ -2319,7 +2319,7 @@ namespace DocGOST
                         var componentPropList = new List<ComponentProperties>() {
                             new ComponentProperties() {
                                 Name = nameName,
-                                Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
+                                Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
                             },
                             new ComponentProperties() {
                                 Name = designatorName,
@@ -2478,25 +2478,30 @@ namespace DocGOST
 
             DisplayPcbSpecValues(pcbSpecList);
             //Сохраняем спецификацию для ПП в БД, потому что она не требует сортировки
-            for (int i = 0; i < pcbSpecList.Count; i++) {
-                PcbSpecificationItem sd = pcbSpecList[i];
-                sd.id = id.makeID(i + 1, pcbSpecTempSave.GetCurrent());
-                project.AddPcbSpecItem(sd);
+            project.BeginTransaction();
+            try { 
+                for (int i = 0; i < pcbSpecList.Count; i++) {
+                    PcbSpecificationItem sd = pcbSpecList[i];
+                    sd.id = id.makeID(i + 1, pcbSpecTempSave.GetCurrent());
+                    project.AddPcbSpecItem(sd);
+                }
+
+                osnNadpisItem.grapha = "2";
+                osnNadpisItem.specificationValue = PrjShifr;
+                osnNadpisItem.perechenValue = osnNadpisItem.specificationValue + " ПЭ3";
+                osnNadpisItem.vedomostValue = osnNadpisItem.specificationValue + " ВП";
+                osnNadpisItem.pcbSpecificationValue = PcbShifr;
+                project.SaveOsnNadpisItem(osnNadpisItem);
+
+                osnNadpisItem.grapha = "25";
+                osnNadpisItem.specificationValue = String.Empty;
+                osnNadpisItem.perechenValue = PrjShifr; //Для перечня здесь указываем спецификацию
+                osnNadpisItem.vedomostValue = PrjShifr; //Для ведомости здесь указываем спецификацию
+                osnNadpisItem.pcbSpecificationValue = PrjShifr; //Для спецификации ПП здесь указываем спецификацию
+                project.SaveOsnNadpisItem(osnNadpisItem);
+            } finally {
+                project.Commit();
             }
-
-            osnNadpisItem.grapha = "2";
-            osnNadpisItem.specificationValue = PrjShifr;
-            osnNadpisItem.perechenValue = osnNadpisItem.specificationValue + " ПЭ3";
-            osnNadpisItem.vedomostValue = osnNadpisItem.specificationValue + " ВП";
-            osnNadpisItem.pcbSpecificationValue = PcbShifr;
-            project.SaveOsnNadpisItem(osnNadpisItem);
-
-            osnNadpisItem.grapha = "25";
-            osnNadpisItem.specificationValue = String.Empty;
-            osnNadpisItem.perechenValue = PrjShifr; //Для перечня здесь указываем спецификацию
-            osnNadpisItem.vedomostValue = PrjShifr; //Для ведомости здесь указываем спецификацию
-            osnNadpisItem.pcbSpecificationValue = PrjShifr; //Для спецификации ПП здесь указываем спецификацию
-            project.SaveOsnNadpisItem(osnNadpisItem);
 
             numberOfValidStrings++;
             plataSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
@@ -2506,21 +2511,26 @@ namespace DocGOST
             var propNameItem = new SettingsItem();
             var settingsDB = new SettingsDB();
 
-            propNameItem.name = "designatorPropName";
-            propNameItem.valueString = designatorName;
-            settingsDB.SaveSettingItem(propNameItem);
+            settingsDB.BeginTransaction();
+            try { 
+                propNameItem.name = "designatorPropName";
+                propNameItem.valueString = designatorName;
+                settingsDB.SaveSettingItem(propNameItem);
 
-            propNameItem.name = "namePropName";
-            propNameItem.valueString = nameName;
-            settingsDB.SaveSettingItem(propNameItem);
+                propNameItem.name = "namePropName";
+                propNameItem.valueString = nameName;
+                settingsDB.SaveSettingItem(propNameItem);
 
-            propNameItem.name = "documPropName";
-            propNameItem.valueString = documName;
-            settingsDB.SaveSettingItem(propNameItem);
+                propNameItem.name = "documPropName";
+                propNameItem.valueString = documName;
+                settingsDB.SaveSettingItem(propNameItem);
 
-            propNameItem.name = "notePropName";
-            propNameItem.valueString = noteName;
-            settingsDB.SaveSettingItem(propNameItem);
+                propNameItem.name = "notePropName";
+                propNameItem.valueString = noteName;
+                settingsDB.SaveSettingItem(propNameItem);
+            } finally {
+                settingsDB.Commit();
+            }
             #endregion
 
             for (int i = 0; i < numberOfStrings; i++) {
@@ -2647,52 +2657,36 @@ namespace DocGOST
 
         }
 
+        //private int MakeDesignatorForOrdering(string designator) {
+        //    int result = 0;
+        //    if (designator.Length > 1) {
+        //        if (Char.IsDigit(designator[1])) {
+        //            result = ((designator[0]) << 24) + int.Parse(designator.Substring(1, designator.Length - 1));
+        //        } else if (designator[1] == '?') {
+        //            result = ((designator[0]) << 24) + 0;
+        //            MessageBox.Show("В схеме есть не пронумерованный компонент " + designator);
+        //        } else if (Char.IsDigit(designator[2])) {
+        //            if (designator.Length >= 3)
+        //                result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(2, designator.Length - 2));
+        //        } else if (designator[2] == '?') {
+        //            if (designator.Length >= 3)
+        //                result = ((designator[0]) << 24) + (designator[1] << 16) + 0;
+        //            MessageBox.Show("В схеме есть не пронумерованный компонент " + designator);
+        //        } else if (Char.IsDigit(designator[3])) //Для комонентов с обозначением из 3 букв, например, "PCB1"
+        //          {
+        //            if (designator.Length >= 4)
+        //                result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(3, designator.Length - 3));
+        //        }
+        //    }
+        //    return result;
+        //}
 
         /// <summary> Формирование числа типа int для правильной сортировки позиционных обозначений,
         /// так как в случае простой сортировки по алфавиту результат неправильный, например,
         /// сортируется C1, C15, C2 вместо C1, C2, C15.<</summary>
         private long MakeDesignatorForOrdering(string designator)
         {
-            int IntShowError() {
-                ShowError($"Не удаётся распознать позиционное обозначение '{designator}'");
-                return 0;
-            }
-
-            // C15, 1C15, C1-15
-            long result = 0;
-            int idx = 0;
-            int des_len = designator.Length;
-            int prefix = 0;
-            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
-                prefix = prefix * 10 + (designator[idx] - '0');
-            int des_start = idx;
-            for (; idx < des_len && !Char.IsDigit(designator[idx]); idx++)
-                if (!Char.IsLetter(designator[idx]))
-                    return IntShowError();
-            int dl = idx - des_start;
-            if (dl == 0 || dl > 3)
-                return IntShowError();
-            for (int i = 0; i < dl; ++i) {
-                result += (long)((byte)designator[des_start + i]) << (56 - (i * 8));
-            }
-            int suffix = 0;
-            for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
-                suffix = suffix * 10 + (designator[idx] - '0');
-            if (suffix == 0)
-                return IntShowError();
-            if (idx < des_len) {
-                if (prefix != 0 || designator[idx] != '-')
-                    return IntShowError();
-                idx++;
-                prefix = suffix;
-                suffix = 0;
-                for (; idx < des_len && Char.IsDigit(designator[idx]); idx++)
-                    suffix = suffix * 10 + (designator[idx] - '0');
-                if (suffix == 0 || idx < des_len)
-                    return IntShowError();
-            }
-            result += (prefix << 16) + suffix;
-            return result;
+            return Global.GetDesignatorValue(designator, (str) => { ShowError(str); });
         }
 
         /// <summary> Чтение строк вида ='Str1'+'Str2' при чтении данных из проекта Altium Designer (.PrjPcb) </summary>
@@ -2987,8 +2981,8 @@ namespace DocGOST
             if (numOfPerechenValidStrings > 1)
                 (new PerechenOperations()).groupPerechenElements(ref pData, ref numOfPerechenValidStrings);
 
-            if (numOfSpecificationStrings > 1)
-                sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+            //if (numOfSpecificationStrings > 1) // _DDD
+            //    sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
 
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
@@ -2999,41 +2993,45 @@ namespace DocGOST
             List<SpecificationItem> specResult = new List<SpecificationItem>(numOfSpecificationStrings + sData.Count);
             List<VedomostItem> vedomostResult = new List<VedomostItem>(numOfVedomostValidStrings);
 
-            for (int i = 0; i < numOfPerechenValidStrings; i++)
-            {
-                PerechenItem pd = pData[i];
-                pd.name += " " + pd.docum;
-                pd.id = id.makeID(i + 1, perTempSave.GetCurrent());
-                perResult.Add(pd);
-                project.AddPerechenItem(pd);
-            }
-
-            for (int i = 0; i < numOfSpecificationStrings + sData.Count; i++)
-            {
-                if (i < sData.Count())
+            project.BeginTransaction(); // _DDD
+            try { 
+                for (int i = 0; i < numOfPerechenValidStrings; i++)
                 {
-                    SpecificationItem sd = sData[i];
-                    sd.id = id.makeID(i + 1, specTempSave.GetCurrent());
-                    specResult.Add(sd);
-                    project.AddSpecItem(sd);
+                    PerechenItem pd = pData[i];
+                    pd.name += " " + pd.docum;
+                    pd.id = id.makeID(i + 1, perTempSave.GetCurrent());
+                    perResult.Add(pd);
+                    project.AddPerechenItem(pd);
                 }
-                else
+
+                for (int i = 0; i < numOfSpecificationStrings + sData.Count; i++)
                 {
-                    SpecificationItem sd = sOtherData[i - sData.Count()];
-                    sd.id = id.makeID(i + 1, specTempSave.GetCurrent());
-                    specResult.Add(sd);
-                    project.AddSpecItem(sd);
+                    if (i < sData.Count())
+                    {
+                        SpecificationItem sd = sData[i];
+                        sd.id = id.makeID(i + 1, specTempSave.GetCurrent());
+                        specResult.Add(sd);
+                        project.AddSpecItem(sd);
+                    }
+                    else
+                    {
+                        SpecificationItem sd = sOtherData[i - sData.Count()];
+                        sd.id = id.makeID(i + 1, specTempSave.GetCurrent());
+                        specResult.Add(sd);
+                        project.AddSpecItem(sd);
+                    }
                 }
-            }
 
-            for (int i = 0; i < numOfVedomostValidStrings; i++)
-            {
-                VedomostItem vd = vData[i];
-                vd.id = id.makeID(i + 1, perTempSave.GetCurrent());
-                vedomostResult.Add(vd);
-                project.AddVedomostItem(vd);
+                for (int i = 0; i < numOfVedomostValidStrings; i++)
+                {
+                    VedomostItem vd = vData[i];
+                    vd.id = id.makeID(i + 1, perTempSave.GetCurrent());
+                    vedomostResult.Add(vd);
+                    project.AddVedomostItem(vd);
+                }
+            } finally {
+                project.Commit();
             }
-
 
             DisplayPerValues(perResult);
             DisplaySpecValues(specResult);

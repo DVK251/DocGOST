@@ -30,37 +30,9 @@ namespace DocGOST
         const int perech_first_page_rows_count = 23;
         const int perech_subseq_page_rows_count = 29;
 
-        private int GetDesignatorValue(string designator)
+        private long GetDesignatorValue(string designator)
         {
-            int result = 0;
-            if (designator.Length > 1)
-            {
-                if (Char.IsDigit(designator[1]))
-                {
-                    result = ((designator[0]) << 24) + int.Parse(designator.Substring(1, designator.Length - 1));
-                }
-                else if (designator[1] == '?')
-                {
-                    result = ((designator[0]) << 24) + 0;                    
-                }
-                else if (Char.IsDigit(designator[2]))
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(2, designator.Length - 2));
-                }
-                else if (designator[2] == '?')
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + 0;
-                }
-                else if (Char.IsDigit(designator[3])) //Для комонентов с обозначением из 3 букв, например, "PCB1"
-                {
-                    if (designator.Length >= 4)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(3, designator.Length - 3));
-                }
-            }
-
-            return result;
+            return Global.GetDesignatorValue(designator);
         }
 
         public void groupPerechenElements(ref List<PerechenItem> pData, ref int numberOfValidStrings)
@@ -75,11 +47,11 @@ namespace DocGOST
              * Если при группировке учитыать только наиметование, то в этом случае они сгруппировались бы как L1-L5.
              * А с учётом позиционного обозначения они сгруппируются как 2 строки: L1 и L3-L5.
              */
-            int prevDesignatorValue = GetDesignatorValue(pData[0].designator);
+            long prevDesignatorValue = GetDesignatorValue(pData[0].designator);
 
             for (int i = 1; i < numberOfValidStrings; i++)
             {
-                int designatorValue = GetDesignatorValue(pData[i].designator);
+                long designatorValue = GetDesignatorValue(pData[i].designator);
                 if (((pData[i].name == prevElemName) & (pData[i].note == prevElemNote))&(designatorValue == prevDesignatorValue+1)) numOfSameElems++;
                 else
                 {

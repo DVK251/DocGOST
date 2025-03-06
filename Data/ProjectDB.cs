@@ -183,6 +183,14 @@ namespace DocGOST.Data
             db.Table<PerechenItem>().Delete(x => x.id > perStartID);
         }
 
+        public void BeginTransaction() {
+            db.BeginTransaction();
+        }
+
+        public void Commit() {
+            db.Commit();
+        }
+
         #endregion
 
         #region Операции со спецификацией

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 using System.IO.Ports;
+using System.Text;
 
 namespace DocGOST.Utils
 {
@@ -155,7 +156,7 @@ namespace DocGOST.Utils
         public CsvReader(string fileName, char delimiter = ';') {
             this.fileName = fileName;
             this.delimiter = delimiter;
-            reader = new StreamReader(fileName);
+            reader = new StreamReader(fileName, Encoding.GetEncoding(1251));
             nLine = 0;
         }
 

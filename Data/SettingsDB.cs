@@ -53,5 +53,13 @@ namespace DocGOST.Data
         {
             return db.Table<SettingsItem>().Where(x => x.name == name).FirstOrDefault();
         }
+
+        public void BeginTransaction() {
+            db.BeginTransaction();
+        }
+
+        public void Commit() {
+            db.Commit();
+        }
     }
 }

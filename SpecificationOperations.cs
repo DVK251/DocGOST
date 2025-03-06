@@ -31,36 +31,9 @@ namespace DocGOST
     {
         const int maxNoteLength = 12;
 
-        private int GetDesignatorValue(string designator)
+        private long GetDesignatorValue(string designator)
         {
-            int result = 0;
-            if (designator.Length > 1)
-            {
-                if (Char.IsDigit(designator[1]))
-                {
-                    result = ((designator[0]) << 24) + int.Parse(designator.Substring(1, designator.Length - 1));
-                }
-                else if (designator[1] == '?')
-                {
-                    result = ((designator[0]) << 24) + 0;                    
-                }
-                else if (Char.IsDigit(designator[2]))
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(2, designator.Length - 2));
-                }
-                else if (designator[2] == '?')
-                {
-                    if (designator.Length >= 3)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + 0;                    
-                }
-                else if (Char.IsDigit(designator[3])) //Для комонентов с обозначением из 3 букв, например, "PCB1"
-                {
-                    if (designator.Length >= 4)
-                        result = ((designator[0]) << 24) + (designator[1] << 16) + int.Parse(designator.Substring(3, designator.Length - 3));
-                }
-            }
-            return result;
+            return Global.GetDesignatorValue(designator);
         }
 
         public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, ref int numberOfValidStrings)
@@ -82,12 +55,12 @@ namespace DocGOST
             tempItem.docum = sList[0].docum;
             tempItem.group = sList[0].group;
 
-            int prevDesignatorValue = GetDesignatorValue(sList[0].designator);
+            long prevDesignatorValue = GetDesignatorValue(sList[0].designator);
 
 
             for (int i = 1; i < numberOfValidStrings; i++)
             {
-                int designatorValue = GetDesignatorValue(sList[i].designator);
+                long designatorValue = GetDesignatorValue(sList[i].designator);
 
                 if ((sList[i].name == prevElemName)&(designatorValue == prevDesignatorValue+1))
                 {
