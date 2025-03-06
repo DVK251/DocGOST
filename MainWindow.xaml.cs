@@ -512,13 +512,15 @@ namespace DocGOST
             groupByName(perechenList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
             //Сохраняем спецификацию для ПП в БД, потому что она не требует сортировки
-            for (int i = 0; i < pcbSpecList.Count; i++)
-            {
-                PcbSpecificationItem sd = pcbSpecList[i];
-                sd.id = id.makeID(i + 1, pcbSpecTempSave.GetCurrent());
-                project.AddPcbSpecItem(sd);
-            }
-
+            project.BeginTransaction();
+            try { 
+                for (int i = 0; i < pcbSpecList.Count; i++)
+                {
+                    PcbSpecificationItem sd = pcbSpecList[i];
+                    sd.id = id.makeID(i + 1, pcbSpecTempSave.GetCurrent());
+                    project.AddPcbSpecItem(sd);
+                }
+            } finally { project.Commit(); }
         }
 
         private void ImportPrjPcbfromAD_Click(object sender, RoutedEventArgs e)

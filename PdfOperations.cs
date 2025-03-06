@@ -53,7 +53,7 @@ namespace DocGOST
 
         public PdfOperations(string projectPath)
         {
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
             normal = new Font(fontGostA, 11f, Font.ITALIC, BaseColor.BLACK);
             big = new Font(fontGostA, 18f, Font.ITALIC, BaseColor.BLACK);
             veryBig = new Font(fontGostA, 22f, Font.ITALIC, BaseColor.BLACK);
@@ -1824,7 +1824,7 @@ namespace DocGOST
             PdfContentByte cb = wr.DirectContent;
             float mm_A4 = doc.PageSize.Width / 210;
 
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
             Font underline = new Font(fontGostA, 12f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK);
 
@@ -1933,7 +1933,7 @@ namespace DocGOST
             PdfContentByte cb = wr.DirectContent;
             float mm_A4 = doc.PageSize.Width / 210;
 
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
             Font underline = new Font(fontGostA, 12f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK);
 
@@ -2066,7 +2066,7 @@ namespace DocGOST
             PdfContentByte cb = wr.DirectContent;
             float mm_A4 = doc.PageSize.Width / 210;
 
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
             Font underline = new Font(fontGostA, 12f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK);
 
@@ -2202,7 +2202,7 @@ namespace DocGOST
             PdfContentByte cb = wr.DirectContent;
             float mm_A3 = doc.PageSize.Width / 420;
 
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);            
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);            
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
             Font header = new Font(fontGostA, 14f, Font.ITALIC, BaseColor.BLACK);
             Font underline = new Font(fontGostA, 14f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK);
@@ -2366,7 +2366,7 @@ namespace DocGOST
             PdfContentByte cb = wr.DirectContent;
             float mm_A4 = doc.PageSize.Width / 210;
 
-            BaseFont fontGostA = BaseFont.CreateFont("GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
 
             #region Заполнение ячейки "Лист регистрации изменений"
