@@ -28,7 +28,7 @@ namespace DocGOST.Data
 
         public SettingsDB()
         {
-            string databasePath = "settings.sGOST";
+            string databasePath = "Settings\\settings.sGOST";
             db = new SQLiteConnection(databasePath);
 
             db.CreateTable<SettingsItem>();

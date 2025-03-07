@@ -29,7 +29,7 @@ namespace DocGOST.Data
 
         public DesignatorDB()
         {
-            string databasePath = "desDescr.ddGOST";
+            string databasePath = "Settings\\desDescr.ddGOST";
             db = new SQLiteConnection(databasePath);
 
             db.CreateTable<DesignatorDescriptionItem> ();

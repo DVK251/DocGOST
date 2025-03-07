@@ -1169,8 +1169,8 @@ namespace DocGOST
             currentCell.PaddingLeft = 2;
             table24_25.AddCell(currentCell);
             table24_25.WriteSelectedRows(1, 2, 8 * mm_A3, 292 * mm_A3, cb);
-            #endregion
 
+            #endregion
             #region Рисование графы 1           
             PdfPTable table1 = new PdfPTable(1);
             table1.TotalWidth = 70 * mm_A3;
@@ -1883,7 +1883,10 @@ namespace DocGOST
                         else
                         {
                             currentCell.Phrase = new Phrase(" ", normal);
-                            currentCell.Phrase.Add(new Phrase(" " + pData[j].name, (pData[j].isNameUnderlined == true) ? underline : normal));
+                            if (!pData[j].isNameUnderlined)
+                                currentCell.Phrase.Add(new Phrase(" " + pData[j].name, normal));
+                            else
+                                currentCell.Phrase.Add(new Phrase(pData[j].name, underline));
                         }
 
 
@@ -1896,7 +1899,7 @@ namespace DocGOST
                     currentCell.FixedHeight = rowsHeight * mm_A4;
 
                     //Для графы "Наименование" устанавливаем выравниванеие по левому краю:
-                    if (i == 1) currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
+                    if (i == 1 && (j < numberOfValidStrings && !pData[j].isNameUnderlined)) currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
                     else currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
 
                     perechTable.AddCell(currentCell);

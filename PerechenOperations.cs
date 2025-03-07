@@ -138,7 +138,11 @@ namespace DocGOST
                             pData[j] = new Data.PerechenItem();
 
                         //Добавление названия группы на освобождённую строку:
-                        pData[i + stringsAdded - numOfSameGroupElems + sdvigNumber - 1].name = prevElemGroup;
+                        {
+                            var idx = i + stringsAdded - numOfSameGroupElems + sdvigNumber - 1;
+                            pData[idx].name = prevElemGroup;
+                            pData[idx].isNameUnderlined = true;
+                        }
 
                         //Изменение общего количества строчек, которые нужно записать в перечень:
                         numberOfValidStrings += sdvigNumber;
@@ -201,7 +205,11 @@ namespace DocGOST
                             pData[j] = new Data.PerechenItem();
 
                         //Добавление названия группы на освобождённую строку:
-                        pData[i + stringsAdded - numOfSameGroupElems + sdvigNumber].name = ' ' + prevElemGroup;
+                        {   
+                            var idx = i + stringsAdded - numOfSameGroupElems + sdvigNumber;
+                            pData[idx].name = ' ' + prevElemGroup;
+                            pData[idx].isNameUnderlined = true;
+                        }
 
                         //Изменение общего количества строчек, которые нужно записать в перечень:
                         numberOfValidStrings += sdvigNumber;

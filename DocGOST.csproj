@@ -265,6 +265,12 @@
     <AdditionalFiles Include="Resources\GOST_A.TTF">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </AdditionalFiles>
+    <AdditionalFiles Include="Settings\desDescr.ddGOST">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </AdditionalFiles>
+    <AdditionalFiles Include="Settings\settings.sGOST">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </AdditionalFiles>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

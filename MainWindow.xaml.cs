@@ -27,8 +27,6 @@ using System.Windows.Input;
 using System.IO;
 using Microsoft.Win32;
 using DocGOST.Data;
-using System.Windows.Media;
-using iTextSharp.text.pdf.parser;
 using DocGOST.Utils;
 
 namespace DocGOST
@@ -89,6 +87,9 @@ namespace DocGOST
             closeBinding.Executed += ExitMenuItem_Click;
             this.CommandBindings.Add(closeBinding);
 
+            // _DDD
+            CreateProject("D:\\Проект.docGOST");
+            ImportPrjfromMentor("d:\\WaveGen.txt");
         }
 
         string projectPath;
@@ -104,61 +105,62 @@ namespace DocGOST
             createDlg.OverwritePrompt = true;
             createDlg.FileName = "Проект";
 
-            if (createDlg.ShowDialog() == true)
+            if (createDlg.ShowDialog() == false) return;
+            CreateProject(createDlg.FileName);
+        }
+
+        void CreateProject(string filename) 
+        { 
+            this.projectPath = filename;
+            //Удаляем все элементы из дерева проектов
+            for (int i = 0; i < projectTreeViewItem.Items.Count; i++)
+                projectTreeViewItem.Items.RemoveAt(i);
+            //Называем проект в дереве проектов так же, как файл
+            projectTreeViewItem.Header = Path.GetFileNameWithoutExtension(projectPath);
+
+            TreeViewItem apparatItem = new TreeViewItem();
+            apparatItem.Header = "Исполнение: [No Variations]";
+            apparatItem.Name = "apparatusTreeItem1";
+
+            TreeViewItem docItem = new TreeViewItem();
+            docItem.Header = "Перечень элементов";
+            docItem.IsSelected = true;
+            docItem.Selected += treeSelectionChanged;
+            apparatItem.Items.Add(docItem);
+            docItem = new TreeViewItem();
+            docItem.Header = "Спецификация";
+            docItem.Selected += treeSelectionChanged;
+            apparatItem.Items.Add(docItem);
+            docItem = new TreeViewItem();
+            docItem.Header = "Ведомость";
+            docItem.Selected += treeSelectionChanged;
+            apparatItem.Items.Add(docItem);
+            docItem = new TreeViewItem();
+            docItem.Header = "Спецификация ПП";
+            docItem.Selected += treeSelectionChanged;
+            apparatItem.Items.Add(docItem);
+            projectTreeViewItem.Items.Add(apparatItem);
+
+            projectTreeViewItem.ExpandSubtree();
+
+            if (File.Exists(projectPath))
             {
-                projectPath = createDlg.FileName;
-                //Удаляем все элементы из дерева проектов
-                for (int i = 0; i < projectTreeViewItem.Items.Count; i++)
-                    projectTreeViewItem.Items.RemoveAt(i);
-                //Называем проект в дереве проектов так же, как файл
-                int length = createDlg.SafeFileName.Length;
-                projectTreeViewItem.Header = createDlg.SafeFileName.Substring(0, length - 8);
-
-                TreeViewItem apparatItem = new TreeViewItem();
-                apparatItem.Header = "Исполнение: [No Variations]";
-                apparatItem.Name = "apparatusTreeItem1";
-
-                TreeViewItem docItem = new TreeViewItem();
-                docItem.Header = "Перечень элементов";
-                docItem.IsSelected = true;
-                docItem.Selected += treeSelectionChanged;
-                apparatItem.Items.Add(docItem);
-                docItem = new TreeViewItem();
-                docItem.Header = "Спецификация";
-                docItem.Selected += treeSelectionChanged;
-                apparatItem.Items.Add(docItem);
-                docItem = new TreeViewItem();
-                docItem.Header = "Ведомость";
-                docItem.Selected += treeSelectionChanged;
-                apparatItem.Items.Add(docItem);
-                docItem = new TreeViewItem();
-                docItem.Header = "Спецификация ПП";
-                docItem.Selected += treeSelectionChanged;
-                apparatItem.Items.Add(docItem);
-                projectTreeViewItem.Items.Add(apparatItem);
-
-                projectTreeViewItem.ExpandSubtree();
-
-                if (File.Exists(projectPath))
-                {
-                    File.Delete(projectPath);
-                }
-
-                project = new ProjectDB(projectPath);
-
-                //Очищаем рабочую область от предыдущих значений
-                DisplayPerValues(null);
-                DisplaySpecValues(null);
-                DisplayVedomostValues(null);
-                DisplayPcbSpecValues(null);
-
-                importMenuItem.IsEnabled = true;
-                osnNadpisMenuItem.IsEnabled = true;
-                osnNadpisButton.IsEnabled = true;
-
-                CreateEmptyProject();
+                File.Delete(projectPath);
             }
 
+            project = new ProjectDB(projectPath);
+
+            //Очищаем рабочую область от предыдущих значений
+            DisplayPerValues(null);
+            DisplaySpecValues(null);
+            DisplayVedomostValues(null);
+            DisplayPcbSpecValues(null);
+
+            importMenuItem.IsEnabled = true;
+            osnNadpisMenuItem.IsEnabled = true;
+            osnNadpisButton.IsEnabled = true;
+
+            CreateEmptyProject();
         }
 
         /// <summary> Переключение между документами в дереве проекта </summary>
@@ -2220,23 +2222,22 @@ namespace DocGOST
         }
 
         private void ImportPrjfromMentor_Click(object sender, RoutedEventArgs e) {
-            waitMessageLabel.Content = "Подождите, импорт данных...";
-            waitGrid.Visibility = Visibility.Visible;
-
             OpenFileDialog openDlg = new OpenFileDialog();
             openDlg.Title = "Выбор CSV-файла, экспортированного из Mentor";
             openDlg.Multiselect = false;
             openDlg.Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"; // _DDD check
-            if (openDlg.ShowDialog() == true) {
-                string pcbPrjFilePath = openDlg.FileName;
-                try { 
-                    ImportPrjfromMentorCsv(pcbPrjFilePath);
-                } catch (Exception ex) {
-                    ShowError(ex.Message);
-                }
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
-                waitGrid.Visibility = Visibility.Hidden;
-            } else {
+            if (openDlg.ShowDialog() == false) return;
+            ImportPrjfromMentor(openDlg.FileName);
+        }
+
+        void ImportPrjfromMentor(string pcbPrjFilePath) {
+            waitMessageLabel.Content = "Подождите, импорт данных...";
+            waitGrid.Visibility = Visibility.Visible;
+            try { 
+                ImportPrjfromMentorCsv(pcbPrjFilePath);
+            } catch (Exception ex) {
+                ShowError(ex.Message);
+            } finally {
                 waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
@@ -2244,11 +2245,13 @@ namespace DocGOST
 
         private void ImportPrjfromMentorCsv(string pcbPrjFilePath) {
             const int HDR_LINE_CNT = 13;
-            const int HDR_IDX_SHIFR = 4; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
-            //const int HDR_IDX_SCH_NAME = 2; // Имя схемы
-            //const int HDR_IDX_ISPOLNITEL = 6; // Исполнитель
-            //const int HDR_IDX_UTVERDIL = 8; // Утвердил
-            //const int HDR_IDX_NORMOKONTROL = 9; // Нормоконтроль
+            const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
+            const int HDR_IDX_SHIFR = 4; 
+            const int HDR_IDX_SCH_NAME = 2; // Имя схемы
+            const int HDR_IDX_ISPOLNITEL = 6; // Исполнитель
+            const int HDR_IDX_PROVERIL = 7; // Проверил
+            const int HDR_IDX_UTVERDIL = 8; // Утвердил
+            const int HDR_IDX_NORMOKONTROL = 9; // Нормоконтроль
             
             const int LINE_PARAM_CNT = 9;
             const int LINE_PIDX_N = 0; // индекс колонки (0+) внутри строки основной части CSV-файла, в которой располагается порядковый номер
@@ -2345,12 +2348,19 @@ namespace DocGOST
             }
             #endregion
 
-            string PrjShifr = HeaderInfo[HDR_IDX_SHIFR];
-            string PcbShifr = "<PcbShifr>";
-            {
-                var idx = PrjShifr.IndexOf(' ');
-                if (idx >= 0) PrjShifr = PrjShifr.Substring(0, idx);
+            string ExtractShift(string str) {
+                var idx = str.IndexOf(' ');
+                if (idx >= 0) return str.Substring(0, idx);
+                else return str;
             }
+
+            string PrjShifr = ExtractShift( HeaderInfo[HDR_IDX_SHIFR] );
+            string ParentDocShifr = HeaderInfo[HDR_PARENT_SHIFR];
+            if (ParentDocShifr == "")
+                ParentDocShifr = PrjShifr;
+            else
+                ParentDocShifr = ExtractShift(ParentDocShifr);
+            string PcbShifr = "<PcbShifr>";
 
             #region Заполнение списков для базы данных проекта
             createPdfMenuItem.IsEnabled = true;
@@ -2495,10 +2505,59 @@ namespace DocGOST
 
                 osnNadpisItem.grapha = "25";
                 osnNadpisItem.specificationValue = String.Empty;
-                osnNadpisItem.perechenValue = PrjShifr; //Для перечня здесь указываем спецификацию
-                osnNadpisItem.vedomostValue = PrjShifr; //Для ведомости здесь указываем спецификацию
-                osnNadpisItem.pcbSpecificationValue = PrjShifr; //Для спецификации ПП здесь указываем спецификацию
+                osnNadpisItem.perechenValue = ParentDocShifr; //Для перечня здесь указываем спецификацию
+                osnNadpisItem.vedomostValue = ParentDocShifr; //Для ведомости здесь указываем спецификацию
+                osnNadpisItem.pcbSpecificationValue = ParentDocShifr; //Для спецификации ПП здесь указываем спецификацию
                 project.SaveOsnNadpisItem(osnNadpisItem);
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "1а",
+                    specificationValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    perechenValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    vedomostValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_SCH_NAME]
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "1a",
+                    specificationValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    perechenValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    vedomostValue = HeaderInfo[HDR_IDX_SCH_NAME],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_SCH_NAME]
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "11a",
+                    specificationValue = HeaderInfo[HDR_IDX_ISPOLNITEL],
+                    perechenValue = HeaderInfo[HDR_IDX_ISPOLNITEL],
+                    vedomostValue = HeaderInfo[HDR_IDX_ISPOLNITEL],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_ISPOLNITEL]
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "11b",
+                    specificationValue = HeaderInfo[HDR_IDX_PROVERIL],
+                    perechenValue = HeaderInfo[HDR_IDX_PROVERIL],
+                    vedomostValue = HeaderInfo[HDR_IDX_PROVERIL],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_PROVERIL]
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "11e",
+                    specificationValue = HeaderInfo[HDR_IDX_UTVERDIL],
+                    perechenValue = HeaderInfo[HDR_IDX_UTVERDIL],
+                    vedomostValue = HeaderInfo[HDR_IDX_UTVERDIL],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_UTVERDIL]
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "11d",
+                    specificationValue = HeaderInfo[HDR_IDX_NORMOKONTROL],
+                    perechenValue = HeaderInfo[HDR_IDX_NORMOKONTROL],
+                    vedomostValue = HeaderInfo[HDR_IDX_NORMOKONTROL],
+                    pcbSpecificationValue = HeaderInfo[HDR_IDX_NORMOKONTROL]
+                });
+
             } finally {
                 project.Commit();
             }
@@ -2922,26 +2981,26 @@ namespace DocGOST
         /// <summary> Создание PDF-файлов перечня и спецификации </summary>
         private void CreatePdf_Click(object sender, RoutedEventArgs e)
         {
-            string pdfPath = "ПЭ.pdf";
+            string pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
             PdfOperations pdf = new PdfOperations(projectPath);
             int startPage = (startFromSecondCheckBox.IsChecked == false) ? 1 : 2;
             bool addListRegistr = (addListRegistrCheckBox.IsChecked == true);
             pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
             System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
-            pdfPath = "Спецификация.pdf";
+            pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
             pdf = new PdfOperations(projectPath);
             pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
             System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
-            pdfPath = "ВП.pdf";
+            pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
             pdf = new PdfOperations(projectPath);
             pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
             System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
             if (isPcbMultilayer == true) //есил плата - сборочная единица
             {
-                pdfPath = "Спецификация ПП.pdf";
+                pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
                 pdf = new PdfOperations(projectPath);
                 pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
                 System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
