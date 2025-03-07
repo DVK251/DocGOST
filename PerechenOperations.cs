@@ -207,7 +207,7 @@ namespace DocGOST
                         //Добавление названия группы на освобождённую строку:
                         {   
                             var idx = i + stringsAdded - numOfSameGroupElems + sdvigNumber;
-                            pData[idx].name = ' ' + prevElemGroup;
+                            pData[idx].name = prevElemGroup;
                             pData[idx].isNameUnderlined = true;
                         }
 
