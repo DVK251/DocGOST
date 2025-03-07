@@ -2474,9 +2474,7 @@ namespace DocGOST
                 pcbSpecList.Add(tempPcbSpecItem);
             }
 
-
             OsnNadpisItem osnNadpisItem = new OsnNadpisItem();
-
 
             DisplayPcbSpecValues(pcbSpecList);
             //Сохраняем спецификацию для ПП в БД, потому что она не требует сортировки
@@ -2534,6 +2532,16 @@ namespace DocGOST
                 settingsDB.Commit();
             }
             #endregion
+
+            var designators = new Dictionary<string, DesignatorDescriptionItem>();
+            using (var designDB = new DesignatorDB()) { 
+                var items = designDB.GetAllItems();
+                foreach (var item in items) { 
+                    designators[item.Designator] = item;
+                    item.Group = item.Group.Substring(0, 1).ToUpper() + item.Group.Substring(1, item.Group.Length - 1).ToLower();
+                    item.GroupPlural = item.GroupPlural.Substring(0, 1).ToUpper() + item.GroupPlural.Substring(1, item.GroupPlural.Length - 1).ToLower();
+                }
+            }
 
             for (int i = 0; i < numberOfStrings; i++) {
                 PerechenItem tempPerechen = new PerechenItem();
@@ -2601,26 +2609,18 @@ namespace DocGOST
 
 
                     string group = string.Empty;
-                    DesignatorDB designDB = new DesignatorDB();
-                    int descrDBLength = designDB.GetLength();
+                    string itemdesgroup = Global.ExtractDesignatorGroupName(tempPerechen.designator);
+                    if (designators.TryGetValue(itemdesgroup, out var desDescr)) { 
+                        tempPerechen.group = desDescr.Group;
+                        tempPerechen.groupPlural = desDescr.GroupPlural;
 
-                    for (int j = 0; j < descrDBLength; j++) {
-                        DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
+                        group = tempPerechen.group;
 
-                        if (tempPerechen.designator.Length >= 2)
-                            if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2))) {
-                                tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
-                                tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
-
-                                group = tempPerechen.group;
-
-                                tempSpecification.group = group;
-                                tempPcbSpecification.group = group;
-                                tempVedomost.group = group;
-                                tempVedomost.groupPlural = tempPerechen.groupPlural;
-                            }
+                        tempSpecification.group = group;
+                        tempPcbSpecification.group = group;
+                        tempVedomost.group = group;
+                        tempVedomost.groupPlural = tempPerechen.groupPlural;
                     }
-
 
                     tempSpecification.name = group + " " + tempSpecification.name + " " + tempSpecification.docum;
 
@@ -3730,34 +3730,35 @@ namespace DocGOST
         {
             if (saveProjectMenuItem.IsEnabled == true)
             {
-                project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                project.BeginTransaction();
+                try { 
+                    project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
 
-                perTempSave.ProjectSaved();
-                specTempSave.ProjectSaved();
-                pcbSpecTempSave.ProjectSaved();
-                vedomostTempSave.ProjectSaved();
+                    perTempSave.ProjectSaved();
+                    specTempSave.ProjectSaved();
+                    pcbSpecTempSave.ProjectSaved();
+                    vedomostTempSave.ProjectSaved();
+
+                    //Записываем состояние галочек параметров экспорта в pdf
+                    ParameterItem parameterItem = new ParameterItem();
+                    parameterItem.name = "isListRegistrChecked";
+                    if (addListRegistrCheckBox.IsChecked == true) parameterItem.value = "true";
+                    else parameterItem.value = "false";
+                    project.SaveParameterItem(parameterItem);
+
+                    parameterItem.name = "isStartFromSecondChecked";
+                    if (startFromSecondCheckBox.IsChecked == true) parameterItem.value = "true";
+                    else parameterItem.value = "false";
+                    project.SaveParameterItem(parameterItem);
 
 
-
-
-                //Записываем состояние галочек параметров экспорта в pdf
-                ParameterItem parameterItem = new ParameterItem();
-                parameterItem.name = "isListRegistrChecked";
-                if (addListRegistrCheckBox.IsChecked == true) parameterItem.value = "true";
-                else parameterItem.value = "false";
-                project.SaveParameterItem(parameterItem);
-
-                parameterItem.name = "isStartFromSecondChecked";
-                if (startFromSecondCheckBox.IsChecked == true) parameterItem.value = "true";
-                else parameterItem.value = "false";
-                project.SaveParameterItem(parameterItem);
-
-
-                parameterItem.name = "isPcbMultilayer";
-                if (isPcbMultilayer == true) parameterItem.value = "true";
-                else parameterItem.value = "false";
-                project.SaveParameterItem(parameterItem);
-
+                    parameterItem.name = "isPcbMultilayer";
+                    if (isPcbMultilayer == true) parameterItem.value = "true";
+                    else parameterItem.value = "false";
+                    project.SaveParameterItem(parameterItem);
+                } finally {
+                    project.Commit();
+                }
             }
         }
 

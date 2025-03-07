@@ -35,7 +35,6 @@ namespace DocGOST
             Other, // Прочие изделия
             Materials, // Материалы
             Compleсts // Комплекты
-
         }
 
       
@@ -102,6 +101,17 @@ namespace DocGOST
             }
             result += (prefix << 16) + suffix;
             return result;
+        }
+
+        public static string ExtractDesignatorGroupName(string designator) {
+            long v = GetDesignatorValue(designator);
+            string rslt = "";
+            for (int i = 0; i < 3; i++) { 
+                byte b = (byte)(v >> (56 - i * 8));
+                if (b == 0) break;
+                rslt += (char)b;
+            }
+            return rslt;
         }
     }
 }

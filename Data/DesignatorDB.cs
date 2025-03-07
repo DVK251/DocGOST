@@ -19,10 +19,11 @@
  */
 
 using SQLite;
+using System;
 
 namespace DocGOST.Data
 {
-    class DesignatorDB
+    class DesignatorDB: IDisposable
     {
         SQLiteConnection db;
 
@@ -46,12 +47,20 @@ namespace DocGOST.Data
 
         public int GetLength()
         {
-            return db.Table<DesignatorDescriptionItem>().OrderByDescending(p => p.Designator).Count();
+            return db.Table<DesignatorDescriptionItem>().Count();
         }
 
         public DesignatorDescriptionItem GetItem(int id)
         {
             return db.Table<DesignatorDescriptionItem>().OrderBy(p => p.Designator).ToArray()[id-1];
+        }
+
+        public DesignatorDescriptionItem[] GetAllItems() {
+            return db.Table<DesignatorDescriptionItem>().OrderBy(p => p.Designator).ToArray();
+        }
+
+        public void Dispose() {
+            db?.Dispose();
         }
     }
 }

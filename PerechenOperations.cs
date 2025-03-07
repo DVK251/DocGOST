@@ -62,7 +62,7 @@ namespace DocGOST
                     {
                         //Группировка позиционных обозначений:
                         if (numOfSameElems == 2) pData[i - 2].designator += ", " + pData[i - 1].designator;
-                        else pData[i - numOfSameElems].designator += " - " + pData[i - 1].designator;
+                        else pData[i - numOfSameElems].designator += "..." + pData[i - 1].designator;
                         // Изменение количества элементов:
                         pData[i - numOfSameElems].quantity = numOfSameElems.ToString();
                         //Перенос оставшихся строчек выше:
@@ -83,7 +83,7 @@ namespace DocGOST
 
                     //Группировка позиционных обозначений:
                     if (numOfSameElems == 2) pData[i - 1].designator += ", " + pData[i].designator;
-                    else pData[i - numOfSameElems + 1].designator += " - " + pData[i].designator;
+                    else pData[i - numOfSameElems + 1].designator += "..." + pData[i].designator;
                     // Изменение количества элементов:
                     pData[i - numOfSameElems + 1].quantity = numOfSameElems.ToString();
 
