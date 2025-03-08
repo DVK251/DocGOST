@@ -28,6 +28,9 @@ using System.IO;
 using Microsoft.Win32;
 using DocGOST.Data;
 using DocGOST.Utils;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace DocGOST
 {
@@ -2639,6 +2642,8 @@ namespace DocGOST
                     }
                 }
 
+
+
                 /*if (isDNF == false)*/ {
 
                     tempSpecification.id = tempPerechen.id;
@@ -2668,10 +2673,8 @@ namespace DocGOST
                     tempVedomost.note = tempPerechen.note;
                     tempVedomost.isNameUnderlined = false;
 
-
-
                     string group = string.Empty;
-                    string itemdesgroup = Global.ExtractDesignatorGroupName(tempPerechen.designator);
+                    string itemdesgroup = Global.ExtractDesignatorGroupName( Global.GetDesignatorValue(tempPerechen.designator) );
                     if (designators.TryGetValue(itemdesgroup, out var desDescr)) { 
                         tempPerechen.group = desDescr.Group;
                         tempPerechen.groupPlural = desDescr.GroupPlural;
@@ -2692,9 +2695,49 @@ namespace DocGOST
                 } /*else {
                     numberOfValidStrings--;
                 }*/
-
-
             } // for
+
+            {
+                int CompareItems(PerechenItem a, PerechenItem b) {
+                    int rslt = a.name.CompareTo(b.name);
+                    if (rslt != 0) return rslt;
+                    rslt = a.note.CompareTo(b.note);
+                    if (rslt != 0) return rslt;
+                    long desa = Global.ExtractDesignatorGroupAndSelfNum( Global.GetDesignatorValue(a.designator) );
+                    long desb = Global.ExtractDesignatorGroupAndSelfNum( Global.GetDesignatorValue(b.designator) );
+                    if (desa < desb) return -1;
+                    else if (desa > desb) return 1;
+                    else return 0;
+                }
+
+                int Compare(KeyValuePair<int, List<PerechenItem>> a, KeyValuePair<int, List<PerechenItem>> b) {
+                    int rslt = a.Value.Count - b.Value.Count;
+                    if (rslt != 0) return rslt;
+                    for (int i = 0; i < a.Value.Count; i++) {
+                        rslt = CompareItems(a.Value[i], b.Value[i]);
+                        if (rslt != 0) return rslt;
+                    }
+                    return 0;
+                }
+
+                var blmap = new Dictionary<int, List<PerechenItem>>();
+                foreach (var pi in perechenList) {
+                    int bln = Global.ExtractDesignatorBlockNum( Global.GetDesignatorValue(pi.designator) );
+                    if (bln == 0) continue;
+                    List<PerechenItem> list;
+                    if (!blmap.TryGetValue(bln, out list)) {
+                        list = new List<PerechenItem>();
+                        blmap.Add(bln, list);
+                    }
+                    list.Add( pi );
+                }
+                var blist = blmap.ToList();
+                blist.Sort(Compare);
+
+                for (int i = 1; i < blist.Count; i++) {
+                    Debug.WriteLine( Compare(blist[i], blist[i-1]) ); 
+                }
+            }
 
             //Сортировка по поз. обозначению
             List<PerechenItem> perechenListSorted = new List<PerechenItem>();
@@ -3173,18 +3216,23 @@ namespace DocGOST
             {
                 project.DeletePerechenTempData(perTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
 
-                for (int i = 1; i <= perLength; i++)
-                {
-                    if (i != strNum)
+                project.BeginTransaction();
+                try { 
+                    for (int i = 1; i <= perLength; i++)
                     {
-                        tempPerList[i - 1].id = id.makeID(i, perTempSave.GetCurrent());
-                        project.AddPerechenItem(tempPerList[i - 1]);
+                        if (i != strNum)
+                        {
+                            tempPerList[i - 1].id = id.makeID(i, perTempSave.GetCurrent());
+                            project.AddPerechenItem(tempPerList[i - 1]);
+                        }
+
                     }
 
+                    tempPerList[strNum - 1] = project.GetPerechenItem(strNum, perTempSave.GetCurrent());
+                    project.AddPerechenItem(tempPerList[strNum - 1]);
+                } finally { 
+                    project.Commit(); 
                 }
-
-                tempPerList[strNum - 1] = project.GetPerechenItem(strNum, perTempSave.GetCurrent());
-                project.AddPerechenItem(tempPerList[strNum - 1]);
 
                 DisplayPerValues(tempPerList);
             }
@@ -3228,7 +3276,12 @@ namespace DocGOST
 
             }
 
-            for (int i = 0; i < perList.Count; i++) project.AddPerechenItem(perList[i]);
+            project.BeginTransaction();
+            try { 
+                for (int i = 0; i < perList.Count; i++) project.AddPerechenItem(perList[i]);
+            } finally {
+                project.Commit();
+            }
 
             DisplayPerValues(perList);
         }
@@ -3265,8 +3318,12 @@ namespace DocGOST
 
             }
 
-            for (int i = 0; i < perList.Count; i++) project.AddPerechenItem(perList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < perList.Count; i++) project.AddPerechenItem(perList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplayPerValues(perList);
         }
 
@@ -3292,16 +3349,20 @@ namespace DocGOST
             {
                 project.DeleteSpecTempData(specTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
 
-                for (int i = 1; i <= length; i++)
-                {
-                    if (i != strNum)
+                project.BeginTransaction();
+                try {
+                    for (int i = 1; i <= length; i++)
                     {
-                        tempList[i - 1].id = id.makeID(i, specTempSave.GetCurrent());
-                        project.AddSpecItem(tempList[i - 1]);
+                        if (i != strNum)
+                        {
+                            tempList[i - 1].id = id.makeID(i, specTempSave.GetCurrent());
+                            project.AddSpecItem(tempList[i - 1]);
+                        }
+
                     }
-
+                } finally {
+                    project.Commit();
                 }
-
                 tempList[strNum - 1] = project.GetSpecItem(strNum, specTempSave.GetCurrent());
 
                 DisplaySpecValues(tempList);
@@ -3429,8 +3490,12 @@ namespace DocGOST
                 specList.Add(specItem);
             }
 
-            for (int i = 0; i < specList.Count; i++) project.AddSpecItem(specList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < specList.Count; i++) project.AddSpecItem(specList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplaySpecValues(specList);
         }
 
@@ -3463,9 +3528,12 @@ namespace DocGOST
                 if (i != strNum) specList.Add(specItem);
 
             }
-
-            for (int i = 0; i < specList.Count; i++) project.AddSpecItem(specList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < specList.Count; i++) project.AddSpecItem(specList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplaySpecValues(specList);
         }
 
@@ -3491,18 +3559,23 @@ namespace DocGOST
             {
                 project.DeleteVedomostTempData(vedomostTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
 
-                for (int i = 1; i <= vedomostLength; i++)
-                {
-                    if (i != strNum)
+                project.BeginTransaction();
+                try {
+                    for (int i = 1; i <= vedomostLength; i++)
                     {
-                        tempVedomostList[i - 1].id = id.makeID(i, vedomostTempSave.GetCurrent());
-                        project.AddVedomostItem(tempVedomostList[i - 1]);
+                        if (i != strNum)
+                        {
+                            tempVedomostList[i - 1].id = id.makeID(i, vedomostTempSave.GetCurrent());
+                            project.AddVedomostItem(tempVedomostList[i - 1]);
+                        }
+
                     }
 
+                    tempVedomostList[strNum - 1] = project.GetVedomostItem(strNum, vedomostTempSave.GetCurrent());
+                    project.AddVedomostItem(tempVedomostList[strNum - 1]);
+                } finally {
+                    project.Commit();
                 }
-
-                tempVedomostList[strNum - 1] = project.GetVedomostItem(strNum, vedomostTempSave.GetCurrent());
-                project.AddVedomostItem(tempVedomostList[strNum - 1]);
 
                 DisplayVedomostValues(tempVedomostList);
             }
@@ -3545,8 +3618,12 @@ namespace DocGOST
 
             }
 
-            for (int i = 0; i < vedomostList.Count; i++) project.AddVedomostItem(vedomostList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < vedomostList.Count; i++) project.AddVedomostItem(vedomostList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplayVedomostValues(vedomostList);
         }
 
@@ -3581,9 +3658,12 @@ namespace DocGOST
                 }
 
             }
-
-            for (int i = 0; i < vedomostList.Count; i++) project.AddVedomostItem(vedomostList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < vedomostList.Count; i++) project.AddVedomostItem(vedomostList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplayVedomostValues(vedomostList);
         }
 
@@ -3608,17 +3688,20 @@ namespace DocGOST
             if (editWindow.ShowDialog() == true)
             {
                 project.DeletePcbSpecTempData(pcbSpecTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
-
-                for (int i = 1; i <= length; i++)
-                {
-                    if (i != strNum)
+                project.BeginTransaction();
+                try {
+                    for (int i = 1; i <= length; i++)
                     {
-                        tempList[i - 1].id = id.makeID(i, pcbSpecTempSave.GetCurrent());
-                        project.AddPcbSpecItem(tempList[i - 1]);
+                        if (i != strNum)
+                        {
+                            tempList[i - 1].id = id.makeID(i, pcbSpecTempSave.GetCurrent());
+                            project.AddPcbSpecItem(tempList[i - 1]);
+                        }
+
                     }
-
+                } finally {
+                    project.Commit();
                 }
-
                 tempList[strNum - 1] = project.GetPcbSpecItem(strNum, pcbSpecTempSave.GetCurrent());
 
                 DisplayPcbSpecValues(tempList);
@@ -3745,9 +3828,12 @@ namespace DocGOST
                 }
                 pcbSpecList.Add(pcbSpecItem);
             }
-
-            for (int i = 0; i < pcbSpecList.Count; i++) project.AddPcbSpecItem(pcbSpecList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < pcbSpecList.Count; i++) project.AddPcbSpecItem(pcbSpecList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplayPcbSpecValues(pcbSpecList);
         }
 
@@ -3780,9 +3866,12 @@ namespace DocGOST
                 if (i != strNum) pcbSpecList.Add(pcbSpecItem);
 
             }
-
-            for (int i = 0; i < pcbSpecList.Count; i++) project.AddPcbSpecItem(pcbSpecList[i]);
-
+            project.BeginTransaction();
+            try {
+                for (int i = 0; i < pcbSpecList.Count; i++) project.AddPcbSpecItem(pcbSpecList[i]);
+            } finally {
+                project.Commit();
+            }
             DisplayPcbSpecValues(pcbSpecList);
         }
 

@@ -103,15 +103,26 @@ namespace DocGOST
             return result;
         }
 
-        public static string ExtractDesignatorGroupName(string designator) {
-            long v = GetDesignatorValue(designator);
+        public static string ExtractDesignatorGroupName(long designatorValue) {
             string rslt = "";
             for (int i = 0; i < 3; i++) { 
-                byte b = (byte)(v >> (56 - i * 8));
+                byte b = (byte)(designatorValue >> (56 - i * 8));
                 if (b == 0) break;
                 rslt += (char)b;
             }
             return rslt;
+        }
+
+        public static int ExtractDesignatorBlockNum(long designatorValue) {
+            return (short)(designatorValue >> 16);
+        }
+
+        public static int ExtractDesignatorSelfNum(long designatorValue) {
+            return (short)(designatorValue);
+        }
+
+        public static long ExtractDesignatorGroupAndSelfNum(long designatorValue) {
+            return designatorValue & unchecked((long)0xFFFFFFFF0000FFFFUL);
         }
     }
 }
