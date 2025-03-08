@@ -42,10 +42,10 @@ namespace DocGOST
             ddItem.Designator = designatorTextBox.Text;
             ddItem.Group = groupTextBox.Text;
             ddItem.GroupPlural = groupPluralTextBox.Text;
-            DesignatorDB desDescr = new DesignatorDB();
-            desDescr.SaveDesignatorItem(ddItem);
-            this.DialogResult = true; 
-            
+            using (DesignatorDB desDescr = new DesignatorDB()) { 
+                desDescr.SaveDesignatorItem(ddItem);
+                this.DialogResult = true; 
+            }            
         }
     }
 }

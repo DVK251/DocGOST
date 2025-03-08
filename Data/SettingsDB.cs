@@ -19,10 +19,11 @@
  */
 
 using SQLite;
+using System;
 
 namespace DocGOST.Data
 {
-    class SettingsDB
+    class SettingsDB : IDisposable
     {
         SQLiteConnection db;
 
@@ -60,6 +61,10 @@ namespace DocGOST.Data
 
         public void Commit() {
             db.Commit();
+        }
+
+        public void Dispose() {
+            db?.Dispose();
         }
     }
 }

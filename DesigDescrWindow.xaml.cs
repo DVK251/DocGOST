@@ -43,18 +43,19 @@ namespace DocGOST
         /// </summary>
         private void DisplayResult()
         {
-            DesignatorDB desDescr = new DesignatorDB();
-            int length = desDescr.GetLength();
-            //Вывод несгруппированных строк в окно программы:
-            List<DesignatorDescriptionItem> result = new List<DesignatorDescriptionItem>(length);
+            using (DesignatorDB desDescr = new DesignatorDB()) { 
+                int length = desDescr.GetLength();
+                //Вывод несгруппированных строк в окно программы:
+                List<DesignatorDescriptionItem> result = new List<DesignatorDescriptionItem>(length);
 
-            for (int i = 1; i <= length; i++)
-            {
-                DesignatorDescriptionItem dd = desDescr.GetItem(i);
-                result.Add(dd);
+                for (int i = 1; i <= length; i++)
+                {
+                    DesignatorDescriptionItem dd = desDescr.GetItem(i);
+                    result.Add(dd);
+                }
+
+                designatorsListView.ItemsSource = result;
             }
-
-            designatorsListView.ItemsSource = result;
         }
 
         /// <summary>
@@ -90,9 +91,10 @@ namespace DocGOST
                                                             MessageBoxButton.YesNo);
             if (dialogResult == MessageBoxResult.Yes)
             {
-                DesignatorDB desDescr = new DesignatorDB();
-                desDescr.DeliteDesignatorItem(ddItem);
-                DisplayResult();
+                using (DesignatorDB desDescr = new DesignatorDB()) { 
+                    desDescr.DeliteDesignatorItem(ddItem);
+                    DisplayResult();
+                }
             }
 
         }

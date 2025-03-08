@@ -24,7 +24,7 @@ using System.Collections.Generic;
 
 namespace DocGOST.Data
 {
-    class ProjectDB
+    class ProjectDB /*: IDisposable*/
     {
         SQLiteConnection db;
 
@@ -531,6 +531,10 @@ namespace DocGOST.Data
             paramItem.value = "[No Variations]";
             SaveParameterItem(paramItem);
         }
+
+        //public void Dispose() {
+        //    db?.Dispose();
+        //}
 
         #endregion
     }

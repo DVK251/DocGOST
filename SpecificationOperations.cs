@@ -92,7 +92,7 @@ namespace DocGOST
             {
                 string[] designators = new string[tempList[i].note.Split(new Char[] { ',' }).Length];
                 designators = tempList[i].note.Split(new Char[] { ',' });
-                if (designators.Length > 2) tempList[i].note = designators[0] + '-' + designators[designators.Length - 1];
+                if (designators.Length > 2) tempList[i].note = designators[0] + "..." + designators[designators.Length - 1];
             }
 
 
@@ -158,6 +158,9 @@ namespace DocGOST
                     string quantity = tempList[i].quantity;
                     string pos = tempList[i].position;
 
+                    string group = tempList[i].group; // _DVK
+                    string docum = tempList[i].docum;
+
                     while ((name != String.Empty) | (note != String.Empty))
                     {
                         tempItem = new SpecificationItem();
@@ -173,9 +176,6 @@ namespace DocGOST
                             tempItem.quantity = quantity;
                             quantity = String.Empty;
                         }
-
-                        string group = tempList[i].group;
-                        string docum = tempList[i].docum;
 
                         //Разбираемся с наименованием
                         if (name.Length > maxNameLength)

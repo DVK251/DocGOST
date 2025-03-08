@@ -991,47 +991,47 @@ namespace DocGOST
 
             #region Считывание наименований параметров компонентов из базы данных
             SettingsItem propNameItem = new SettingsItem();
-            SettingsDB settingsDB = new SettingsDB();
+            using (SettingsDB settingsDB = new SettingsDB()) { 
+                //Чтение наименования свойства с позиционным обозначением
+                if (settingsDB.GetItem("designatorPropName") == null)
+                {
+                    propNameItem.name = "designatorPropName";
+                    propNameItem.valueString = "Designator";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("designatorPropName");
+                defaultDesignatorPropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с позиционным обозначением
-            if (settingsDB.GetItem("designatorPropName") == null)
-            {
-                propNameItem.name = "designatorPropName";
-                propNameItem.valueString = "Designator";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("designatorPropName");
-            defaultDesignatorPropName = propNameItem.valueString;
+                //Чтение наименования свойства с наименованием компонента
+                if (settingsDB.GetItem("namePropName") == null)
+                {
+                    propNameItem.name = "namePropName";
+                    propNameItem.valueString = "PartNumber";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("namePropName");
+                defaultNamePropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с наименованием компонента
-            if (settingsDB.GetItem("namePropName") == null)
-            {
-                propNameItem.name = "namePropName";
-                propNameItem.valueString = "PartNumber";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("namePropName");
-            defaultNamePropName = propNameItem.valueString;
+                //Чтение наименования свойства с документом на поставку компонента
+                if (settingsDB.GetItem("documPropName") == null)
+                {
+                    propNameItem.name = "documPropName";
+                    propNameItem.valueString = "Manufacturer";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("documPropName");
+                defaultDocumPropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с документом на поставку компонента
-            if (settingsDB.GetItem("documPropName") == null)
-            {
-                propNameItem.name = "documPropName";
-                propNameItem.valueString = "Manufacturer";
-                settingsDB.SaveSettingItem(propNameItem);
+                //Чтение наименования свойства с комментарием
+                if (settingsDB.GetItem("notePropName") == null)
+                {
+                    propNameItem.name = "notePropName";
+                    propNameItem.valueString = "Note";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("notePropName");
+                defaultNotePropName = propNameItem.valueString;
             }
-            else propNameItem = settingsDB.GetItem("documPropName");
-            defaultDocumPropName = propNameItem.valueString;
-
-            //Чтение наименования свойства с комментарием
-            if (settingsDB.GetItem("notePropName") == null)
-            {
-                propNameItem.name = "notePropName";
-                propNameItem.valueString = "Note";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("notePropName");
-            defaultNotePropName = propNameItem.valueString;
             #endregion
 
 
@@ -1244,23 +1244,24 @@ namespace DocGOST
 
                 #region Сохранение выбранных наименований свойств комопонентов в SettingsDB
                 propNameItem = new SettingsItem();
-                settingsDB = new SettingsDB();
+                using (var settingsDB = new SettingsDB()) { 
 
-                propNameItem.name = "designatorPropName";
-                propNameItem.valueString = designatorName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "designatorPropName";
+                    propNameItem.valueString = designatorName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "namePropName";
-                propNameItem.valueString = nameName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "namePropName";
+                    propNameItem.valueString = nameName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "documPropName";
-                propNameItem.valueString = documName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "documPropName";
+                    propNameItem.valueString = documName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "notePropName";
-                propNameItem.valueString = noteName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "notePropName";
+                    propNameItem.valueString = noteName;
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
                 #endregion
 
                 for (int i = 0; i < numberOfStrings; i++)
@@ -1369,28 +1370,28 @@ namespace DocGOST
 
 
                         string group = string.Empty;
-                        DesignatorDB designDB = new DesignatorDB();
-                        int descrDBLength = designDB.GetLength();
+                        using (DesignatorDB designDB = new DesignatorDB()) { 
+                            int descrDBLength = designDB.GetLength();
 
-                        for (int j = 0; j < descrDBLength; j++)
-                        {
-                            DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
+                            for (int j = 0; j < descrDBLength; j++)
+                            {
+                                DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
 
-                            if (tempPerechen.designator.Length >= 2)
-                                if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2)))
-                                {
-                                    tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
-                                    tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
+                                if (tempPerechen.designator.Length >= 2)
+                                    if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2)))
+                                    {
+                                        tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
+                                        tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
 
-                                    group = tempPerechen.group;
+                                        group = tempPerechen.group;
 
-                                    tempSpecification.group = group;
-                                    tempPcbSpecification.group = group;
-                                    tempVedomost.group = group;
-                                    tempVedomost.groupPlural = tempPerechen.groupPlural;
-                                }
+                                        tempSpecification.group = group;
+                                        tempPcbSpecification.group = group;
+                                        tempVedomost.group = group;
+                                        tempVedomost.groupPlural = tempPerechen.groupPlural;
+                                    }
+                            }
                         }
-
 
                         tempSpecification.name = group + " " + tempSpecification.name + " " + tempSpecification.docum;
 
@@ -1772,47 +1773,47 @@ namespace DocGOST
 
             #region Считывание наименований параметров компонентов из базы данных
             SettingsItem propNameItem = new SettingsItem();
-            SettingsDB settingsDB = new SettingsDB();
+            using (SettingsDB settingsDB = new SettingsDB()) { 
+                //Чтение наименования свойства с позиционным обозначением
+                if (settingsDB.GetItem("designatorPropName") == null)
+                {
+                    propNameItem.name = "designatorPropName";
+                    propNameItem.valueString = "Designator";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("designatorPropName");
+                defaultDesignatorPropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с позиционным обозначением
-            if (settingsDB.GetItem("designatorPropName") == null)
-            {
-                propNameItem.name = "designatorPropName";
-                propNameItem.valueString = "Designator";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("designatorPropName");
-            defaultDesignatorPropName = propNameItem.valueString;
+                //Чтение наименования свойства с наименованием компонента
+                if (settingsDB.GetItem("namePropName") == null)
+                {
+                    propNameItem.name = "namePropName";
+                    propNameItem.valueString = "PartNumber";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("namePropName");
+                defaultNamePropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с наименованием компонента
-            if (settingsDB.GetItem("namePropName") == null)
-            {
-                propNameItem.name = "namePropName";
-                propNameItem.valueString = "PartNumber";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("namePropName");
-            defaultNamePropName = propNameItem.valueString;
+                //Чтение наименования свойства с документом на поставку компонента
+                if (settingsDB.GetItem("documPropName") == null)
+                {
+                    propNameItem.name = "documPropName";
+                    propNameItem.valueString = "Manufacturer";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("documPropName");
+                defaultDocumPropName = propNameItem.valueString;
 
-            //Чтение наименования свойства с документом на поставку компонента
-            if (settingsDB.GetItem("documPropName") == null)
-            {
-                propNameItem.name = "documPropName";
-                propNameItem.valueString = "Manufacturer";
-                settingsDB.SaveSettingItem(propNameItem);
+                //Чтение наименования свойства с комментарием
+                if (settingsDB.GetItem("notePropName") == null)
+                {
+                    propNameItem.name = "notePropName";
+                    propNameItem.valueString = "Note";
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
+                else propNameItem = settingsDB.GetItem("notePropName");
+                defaultNotePropName = propNameItem.valueString;
             }
-            else propNameItem = settingsDB.GetItem("documPropName");
-            defaultDocumPropName = propNameItem.valueString;
-
-            //Чтение наименования свойства с комментарием
-            if (settingsDB.GetItem("notePropName") == null)
-            {
-                propNameItem.name = "notePropName";
-                propNameItem.valueString = "Note";
-                settingsDB.SaveSettingItem(propNameItem);
-            }
-            else propNameItem = settingsDB.GetItem("notePropName");
-            defaultNotePropName = propNameItem.valueString;
             #endregion
 
 
@@ -2025,23 +2026,24 @@ namespace DocGOST
 
                 #region Сохранение выбранных наименований свойств комопонентов в SettingsDB
                 propNameItem = new SettingsItem();
-                settingsDB = new SettingsDB();
+                using (var settingsDB = new SettingsDB()) { 
 
-                propNameItem.name = "designatorPropName";
-                propNameItem.valueString = designatorName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "designatorPropName";
+                    propNameItem.valueString = designatorName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "namePropName";
-                propNameItem.valueString = nameName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "namePropName";
+                    propNameItem.valueString = nameName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "documPropName";
-                propNameItem.valueString = documName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "documPropName";
+                    propNameItem.valueString = documName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "notePropName";
-                propNameItem.valueString = noteName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "notePropName";
+                    propNameItem.valueString = noteName;
+                    settingsDB.SaveSettingItem(propNameItem);
+                }
                 #endregion
 
                 for (int i = 0; i < numberOfStrings; i++)
@@ -2153,26 +2155,27 @@ namespace DocGOST
 
 
                         string group = string.Empty;
-                        DesignatorDB designDB = new DesignatorDB();
-                        int descrDBLength = designDB.GetLength();
+                        using (DesignatorDB designDB = new DesignatorDB()) { 
+                            int descrDBLength = designDB.GetLength();
 
-                        for (int j = 0; j < descrDBLength; j++)
-                        {
-                            DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
+                            for (int j = 0; j < descrDBLength; j++)
+                            {
+                                DesignatorDescriptionItem desDescr = designDB.GetItem(j + 1);
 
-                            if (tempPerechen.designator.Length >= 2)
-                                if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2)))
-                                {
-                                    tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
-                                    tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
+                                if (tempPerechen.designator.Length >= 2)
+                                    if ((desDescr.Designator == tempPerechen.designator.Substring(0, 1)) | (desDescr.Designator == tempPerechen.designator.Substring(0, 2)))
+                                    {
+                                        tempPerechen.group = desDescr.Group.Substring(0, 1).ToUpper() + desDescr.Group.Substring(1, desDescr.Group.Length - 1).ToLower();
+                                        tempPerechen.groupPlural = desDescr.GroupPlural.Substring(0, 1).ToUpper() + desDescr.GroupPlural.Substring(1, desDescr.GroupPlural.Length - 1).ToLower();
 
-                                    group = tempPerechen.group;
+                                        group = tempPerechen.group;
 
-                                    tempSpecification.group = group;
-                                    tempPcbSpecification.group = group;
-                                    tempVedomost.group = group;
-                                    tempVedomost.groupPlural = tempPerechen.groupPlural;
-                                }
+                                        tempSpecification.group = group;
+                                        tempPcbSpecification.group = group;
+                                        tempVedomost.group = group;
+                                        tempVedomost.groupPlural = tempPerechen.groupPlural;
+                                    }
+                            }
                         }
 
 
@@ -2225,7 +2228,7 @@ namespace DocGOST
             OpenFileDialog openDlg = new OpenFileDialog();
             openDlg.Title = "Выбор CSV-файла, экспортированного из Mentor";
             openDlg.Multiselect = false;
-            openDlg.Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"; // _DDD check
+            openDlg.Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"; 
             if (openDlg.ShowDialog() == false) return;
             ImportPrjfromMentor(openDlg.FileName);
         }
@@ -2568,27 +2571,27 @@ namespace DocGOST
 
             #region Сохранение выбранных наименований свойств комопонентов в SettingsDB
             var propNameItem = new SettingsItem();
-            var settingsDB = new SettingsDB();
+            using (var settingsDB = new SettingsDB()) { 
+                settingsDB.BeginTransaction();
+                try { 
+                    propNameItem.name = "designatorPropName";
+                    propNameItem.valueString = designatorName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-            settingsDB.BeginTransaction();
-            try { 
-                propNameItem.name = "designatorPropName";
-                propNameItem.valueString = designatorName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "namePropName";
+                    propNameItem.valueString = nameName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "namePropName";
-                propNameItem.valueString = nameName;
-                settingsDB.SaveSettingItem(propNameItem);
+                    propNameItem.name = "documPropName";
+                    propNameItem.valueString = documName;
+                    settingsDB.SaveSettingItem(propNameItem);
 
-                propNameItem.name = "documPropName";
-                propNameItem.valueString = documName;
-                settingsDB.SaveSettingItem(propNameItem);
-
-                propNameItem.name = "notePropName";
-                propNameItem.valueString = noteName;
-                settingsDB.SaveSettingItem(propNameItem);
-            } finally {
-                settingsDB.Commit();
+                    propNameItem.name = "notePropName";
+                    propNameItem.valueString = noteName;
+                    settingsDB.SaveSettingItem(propNameItem);
+                } finally {
+                    settingsDB.Commit();
+                }
             }
             #endregion
 
@@ -3042,8 +3045,8 @@ namespace DocGOST
             if (numOfPerechenValidStrings > 1)
                 (new PerechenOperations()).groupPerechenElements(ref pData, ref numOfPerechenValidStrings);
 
-            //if (numOfSpecificationStrings > 1) // _DDD
-            //    sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+            if (numOfSpecificationStrings > 1) 
+                sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
 
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
@@ -3054,7 +3057,7 @@ namespace DocGOST
             List<SpecificationItem> specResult = new List<SpecificationItem>(numOfSpecificationStrings + sData.Count);
             List<VedomostItem> vedomostResult = new List<VedomostItem>(numOfVedomostValidStrings);
 
-            project.BeginTransaction(); // _DDD
+            project.BeginTransaction(); 
             try { 
                 for (int i = 0; i < numOfPerechenValidStrings; i++)
                 {
