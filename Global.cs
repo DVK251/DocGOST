@@ -78,7 +78,7 @@ namespace DocGOST
                 if (!Char.IsLetter(designator[idx]))
                     return IntOnError();
             int dl = idx - des_start;
-            if (dl == 0 || dl > 3)
+            if (dl == 0 || dl > 4)
                 return IntOnError();
             for (int i = 0; i < dl; ++i) {
                 result += (long)((byte)designator[des_start + i]) << (56 - (i * 8));
@@ -105,7 +105,7 @@ namespace DocGOST
 
         public static string ExtractDesignatorGroupName(long designatorValue) {
             string rslt = "";
-            for (int i = 0; i < 3; i++) { 
+            for (int i = 0; i < 4; i++) { 
                 byte b = (byte)(designatorValue >> (56 - i * 8));
                 if (b == 0) break;
                 rslt += (char)b;

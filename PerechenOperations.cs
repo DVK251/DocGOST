@@ -20,6 +20,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Windows;
 using DocGOST.Data;
 
@@ -245,5 +247,54 @@ namespace DocGOST
             #endregion
 
         }
-    }
+
+        public static List<PerechenItem> groupPerechenElements_v2(List<PerechenItem> pData) {
+            
+            var listpi = new List<PerechenItem>(pData.Count);
+
+            for (int i = 0; i < pData.Count; i++) {
+                if (i == 0 
+                        || pData[i].name != pData[i-1].name || pData[i].note != pData[i - 1].note 
+                        || Global.GetDesignatorValue(pData[i].designator) != Global.GetDesignatorValue(pData[i-1].designator)+1)
+                    listpi.Add( pData[i] );
+                else { 
+                    listpi.Last().quantity = (Int32.Parse(listpi.Last().quantity) + Int32.Parse(pData[i].quantity)).ToString();
+                }
+            }
+
+            var rslt = new List<PerechenItem>(pData.Count);
+            for (int i = 0; i < listpi.Count - 1; i++) {
+                var curItem = listpi[i];
+                var cnt = Int32.Parse(curItem.quantity);
+                if (cnt > 1) {
+                    var ides = Global.GetDesignatorValue(curItem.designator);
+                    var desgn = Global.ExtractDesignatorGroupName(ides);
+                    if (cnt == 2)
+                        curItem.designator = desgn + Global.ExtractDesignatorSelfNum(ides) + ", " + desgn + Global.ExtractDesignatorSelfNum(ides+1);
+                    else
+                        curItem.designator = desgn + Global.ExtractDesignatorSelfNum(ides) + "..." + desgn + Global.ExtractDesignatorSelfNum(ides+cnt-1);
+                }
+
+                if (i == 0 || curItem.group != listpi[i-1].group) {
+                    rslt.Add( new PerechenItem() );
+                    if ( (i == listpi.Count - 1) || (curItem.group != listpi[i+1].group) ) {
+                        curItem.name = curItem.group + " " + curItem.name;
+                        rslt.Add(curItem);
+                    }
+                    else {
+                        rslt.Add(new PerechenItem() {
+                            name = curItem.groupPlural,
+                            isNameUnderlined = true,
+                        });
+                        rslt.Add(curItem);
+                    }
+                }
+                else {
+                    rslt.Add(curItem);
+                }
+            } // for
+            return rslt;
+        }
+
+    } // class
 }

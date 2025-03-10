@@ -31,6 +31,8 @@ using DocGOST.Utils;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
+using System.Security.Permissions;
 
 namespace DocGOST
 {
@@ -57,6 +59,12 @@ namespace DocGOST
         Global id; //Переменная для работы с id данных проекта (т.е. для того, чтобы создавать и расшифровывать id,
                    //т.к. id сгруппирован из номера текущего сохранённого состояния и номера строки записи - подробнее в Data.PerechenItem.cs и Data.SpecificationItem.cs)
         bool isPcbMultilayer = false;
+
+        class HiePerechenBlock
+        {
+            public List<int> sameBlockNums;
+            public List<PerechenItem> perechenItems;
+        }
 
         public MainWindow()
         {
@@ -514,7 +522,7 @@ namespace DocGOST
             undoMenuItem.IsEnabled = true;
             redoMenuItem.IsEnabled = true;
 
-            groupByName(perechenList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+            groupByNameSaveAndPrint(perechenList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
             //Сохраняем спецификацию для ПП в БД, потому что она не требует сортировки
             project.BeginTransaction();
@@ -1430,7 +1438,7 @@ namespace DocGOST
                 undoMenuItem.IsEnabled = true;
                 redoMenuItem.IsEnabled = true;
                 #endregion
-                groupByName(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+                groupByNameSaveAndPrint(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
                 //waitGrid.Visibility = Visibility.Hidden;
             }
@@ -2216,7 +2224,7 @@ namespace DocGOST
                 undoMenuItem.IsEnabled = true;
                 redoMenuItem.IsEnabled = true;
                 #endregion
-                groupByName(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+                groupByNameSaveAndPrint(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
                 //waitGrid.Visibility = Visibility.Hidden;
             }
@@ -2697,6 +2705,7 @@ namespace DocGOST
                 }*/
             } // for
 
+            var hiePerechenBlockList = new List<HiePerechenBlock>();
             {
                 int CompareItems(PerechenItem a, PerechenItem b) {
                     int rslt = a.name.CompareTo(b.name);
@@ -2705,12 +2714,10 @@ namespace DocGOST
                     if (rslt != 0) return rslt;
                     long desa = Global.ExtractDesignatorGroupAndSelfNum( Global.GetDesignatorValue(a.designator) );
                     long desb = Global.ExtractDesignatorGroupAndSelfNum( Global.GetDesignatorValue(b.designator) );
-                    if (desa < desb) return -1;
-                    else if (desa > desb) return 1;
-                    else return 0;
+                    return Math.Sign( desa - desb );
                 }
 
-                int Compare(KeyValuePair<int, List<PerechenItem>> a, KeyValuePair<int, List<PerechenItem>> b) {
+                int CompareWithoutBlN(KeyValuePair<int, List<PerechenItem>> a, KeyValuePair<int, List<PerechenItem>> b) {
                     int rslt = a.Value.Count - b.Value.Count;
                     if (rslt != 0) return rslt;
                     for (int i = 0; i < a.Value.Count; i++) {
@@ -2720,10 +2727,23 @@ namespace DocGOST
                     return 0;
                 }
 
+                int CompareWithBlN(KeyValuePair<int, List<PerechenItem>> a, KeyValuePair<int, List<PerechenItem>> b) {
+                    var rslt = CompareWithoutBlN(a, b);
+                    if (rslt == 0)
+                        rslt = a.Key - b.Key;
+                    return rslt;
+                }
+
+                hiePerechenBlockList.Add(new HiePerechenBlock() {
+                    perechenItems = new List<PerechenItem>()
+                });
                 var blmap = new Dictionary<int, List<PerechenItem>>();
                 foreach (var pi in perechenList) {
-                    int bln = Global.ExtractDesignatorBlockNum( Global.GetDesignatorValue(pi.designator) );
-                    if (bln == 0) continue;
+                    int bln = Global.ExtractDesignatorBlockNum( MakeDesignatorForOrdering(pi.designator) );
+                    if (bln == 0) {
+                        hiePerechenBlockList[0].perechenItems.Add(pi);
+                        continue;
+                    }
                     List<PerechenItem> list;
                     if (!blmap.TryGetValue(bln, out list)) {
                         list = new List<PerechenItem>();
@@ -2732,11 +2752,36 @@ namespace DocGOST
                     list.Add( pi );
                 }
                 var blist = blmap.ToList();
-                blist.Sort(Compare);
+                blist.Sort(CompareWithBlN);
 
-                for (int i = 1; i < blist.Count; i++) {
-                    Debug.WriteLine( Compare(blist[i], blist[i-1]) ); 
+                for (int i = 0; i < blist.Count; i++) {
+                    if (i == 0 || CompareWithoutBlN(blist[i], blist[i - 1]) != 0)
+                        hiePerechenBlockList.Add( new HiePerechenBlock() {
+                            sameBlockNums = new List<int> { blist[i].Key },
+                            perechenItems = blist[i].Value
+                        } );
+                    else 
+                        hiePerechenBlockList.Last().sameBlockNums.Add(blist[i].Key);
                 }
+
+                for (int i = 0; i < hiePerechenBlockList.Count; i++) {
+                    foreach (var pi in hiePerechenBlockList[i].perechenItems) {
+                        long ides = Global.GetDesignatorValue(pi.designator);
+                        pi.designator = Global.ExtractDesignatorGroupName(ides) + Global.ExtractDesignatorSelfNum(ides);
+                    }
+                    hiePerechenBlockList[i].perechenItems.Sort((a, b) => Math.Sign(Global.GetDesignatorValue(a.designator) - Global.GetDesignatorValue(b.designator)));
+                }
+
+
+                int CompareHieItems(HiePerechenBlock a, HiePerechenBlock b) {
+                    return a.sameBlockNums.Min() - b.sameBlockNums.Min();
+                }
+
+                hiePerechenBlockList.Sort(CompareHieItems);
+                //Debug.WriteLine(blist[i].Key + " " + CompareWithoutBlN(blist[i], blist[i-1]) ); 
+                //foreach (var item in hiePerechenBlockList) {
+                //    Debug.WriteLine((item.sameBlockNums == null ? "" : string.Join(",", item.sameBlockNums)) + " --- " + item.perechenItems.Count); 
+                //}
             }
 
             //Сортировка по поз. обозначению
@@ -2758,7 +2803,7 @@ namespace DocGOST
             undoMenuItem.IsEnabled = true;
             redoMenuItem.IsEnabled = true;
             #endregion
-            groupByName(perechenListSorted, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+            groupByNameSaveAndPrint_v2(hiePerechenBlockList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
             //waitGrid.Visibility = Visibility.Hidden;
 
@@ -3078,7 +3123,7 @@ namespace DocGOST
         /// <param name="sData"> Список с данными спецификации без данных раздела "Прочие изделия"</param>
         /// <param name="sOtherData"> Список с данными спецификации из раздела данных "Прочие изделия", которые будут сгруппированы</param>
         /// <param name="vData"> Список с данными для ведомости, которые будут сгруппированы</param>
-        private void groupByName(List<PerechenItem> pData, List<SpecificationItem> sData, List<SpecificationItem> sOtherData, List<VedomostItem> vData)
+        private void groupByNameSaveAndPrint(List<PerechenItem> pData, List<SpecificationItem> sData, List<SpecificationItem> sOtherData, List<VedomostItem> vData)
         {
 
             int numOfPerechenValidStrings = pData.Count;
@@ -3094,8 +3139,60 @@ namespace DocGOST
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
 
-            //Запись значений в файл и вывод сгруппированных строк в окно программы:
+            _SaveAndPrint(pData, sData, sOtherData, vData, numOfPerechenValidStrings, numOfSpecificationStrings, numOfVedomostValidStrings);
+        }
 
+        private void groupByNameSaveAndPrint_v2(List<HiePerechenBlock> hiePerechen, List<SpecificationItem> sData, List<SpecificationItem> sOtherData, List<VedomostItem> vData) {
+
+            int numOfSpecificationStrings = sOtherData.Count;
+            int numOfVedomostValidStrings = vData.Count;
+
+            var wholePerechen = new List<PerechenItem>();
+            for (int i = 0; i < hiePerechen.Count; i++) {
+                if (i > 0) {
+                    // header
+                    var sbn = hiePerechen[i].sameBlockNums;
+                    var rlist = new List<(int start, int cnt)>();
+                    for (int j = 0; j < sbn.Count; j++) {
+                        if ( j == 0 || sbn[j] != sbn[j-1] )
+                            rlist.Add( (sbn[j], 1) );
+                        else
+                            rlist[rlist.Count - 1] = (rlist[rlist.Count - 1].start, rlist[rlist.Count - 1].cnt+1);
+                    }
+                    wholePerechen.Add(new PerechenItem());
+                    for (int j = 0; j < rlist.Count; j++) {
+                        var pi = new PerechenItem() {
+                            name = (j == 0) ? "Блок " + i : "",
+                            isNameUnderlined = (j == 0),
+                            quantity = (j == 0) ? sbn.Count.ToString() : ""
+                        };
+                        if (rlist[j].cnt > 1) 
+                            pi.designator = $"A{rlist[j].start}...A{rlist[j].start + rlist[j].cnt -1}";
+                        else if (j < rlist.Count - 1 && rlist[j+1].cnt == 1) { 
+                            pi.designator = $"A{rlist[j].start}, A{rlist[j+1].start}";
+                            j++;
+                        }
+                        else
+                            pi.designator = $"A{rlist[j].start}";
+                        wholePerechen.Add(pi);
+                    }
+                }
+                var pData2 = PerechenOperations.groupPerechenElements_v2(hiePerechen[i].perechenItems);
+                wholePerechen.AddRange(pData2);
+            }
+
+            if (numOfSpecificationStrings > 1)
+                sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+
+            if (numOfVedomostValidStrings > 1)
+                vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
+
+            _SaveAndPrint(wholePerechen, sData, sOtherData, vData, wholePerechen.Count, numOfSpecificationStrings, numOfVedomostValidStrings);
+        }
+
+        //Запись значений в файл и вывод сгруппированных строк в окно программы:
+        void _SaveAndPrint(List<PerechenItem> pData, List<SpecificationItem> sData, List<SpecificationItem> sOtherData, List<VedomostItem> vData,
+            int numOfPerechenValidStrings, int numOfSpecificationStrings, int numOfVedomostValidStrings) {
             List<PerechenItem> perResult = new List<PerechenItem>(numOfPerechenValidStrings);
             List<SpecificationItem> specResult = new List<SpecificationItem>(numOfSpecificationStrings + sData.Count);
             List<VedomostItem> vedomostResult = new List<VedomostItem>(numOfVedomostValidStrings);
