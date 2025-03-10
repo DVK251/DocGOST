@@ -2772,12 +2772,7 @@ namespace DocGOST
                     hiePerechenBlockList[i].perechenItems.Sort((a, b) => Math.Sign(Global.GetDesignatorValue(a.designator) - Global.GetDesignatorValue(b.designator)));
                 }
 
-
-                int CompareHieItems(HiePerechenBlock a, HiePerechenBlock b) {
-                    return a.sameBlockNums.Min() - b.sameBlockNums.Min();
-                }
-
-                hiePerechenBlockList.Sort(CompareHieItems);
+                hiePerechenBlockList.Sort( (a, b) => (a.sameBlockNums == null ? -1 : a.sameBlockNums.Min()) - (b.sameBlockNums == null ? -1 : b.sameBlockNums.Min()) );
                 //Debug.WriteLine(blist[i].Key + " " + CompareWithoutBlN(blist[i], blist[i-1]) ); 
                 //foreach (var item in hiePerechenBlockList) {
                 //    Debug.WriteLine((item.sameBlockNums == null ? "" : string.Join(",", item.sameBlockNums)) + " --- " + item.perechenItems.Count); 
@@ -3154,20 +3149,24 @@ namespace DocGOST
                     var sbn = hiePerechen[i].sameBlockNums;
                     var rlist = new List<(int start, int cnt)>();
                     for (int j = 0; j < sbn.Count; j++) {
-                        if ( j == 0 || sbn[j] != sbn[j-1] )
+                        if ( j == 0 || sbn[j] != sbn[j-1]+1 )
                             rlist.Add( (sbn[j], 1) );
                         else
                             rlist[rlist.Count - 1] = (rlist[rlist.Count - 1].start, rlist[rlist.Count - 1].cnt+1);
                     }
                     wholePerechen.Add(new PerechenItem());
+                    wholePerechen.Add(new PerechenItem());
+                    if (PerechenOperations.IsLineLastOnPage(wholePerechen.Count+1)) wholePerechen.Add(new PerechenItem());
                     for (int j = 0; j < rlist.Count; j++) {
                         var pi = new PerechenItem() {
                             name = (j == 0) ? "Блок " + i : "",
                             isNameUnderlined = (j == 0),
                             quantity = (j == 0) ? sbn.Count.ToString() : ""
                         };
-                        if (rlist[j].cnt > 1) 
-                            pi.designator = $"A{rlist[j].start}...A{rlist[j].start + rlist[j].cnt -1}";
+                        if (rlist[j].cnt > 2) 
+                            pi.designator = $"A{rlist[j].start}...A{rlist[j].start + rlist[j].cnt - 1}";
+                        else if (rlist[j].cnt == 2)
+                            pi.designator = $"A{rlist[j].start}, A{rlist[j].start + rlist[j].cnt - 1}";
                         else if (j < rlist.Count - 1 && rlist[j+1].cnt == 1) { 
                             pi.designator = $"A{rlist[j].start}, A{rlist[j+1].start}";
                             j++;
@@ -3178,7 +3177,11 @@ namespace DocGOST
                     }
                 }
                 var pData2 = PerechenOperations.groupPerechenElements_v2(hiePerechen[i].perechenItems);
-                wholePerechen.AddRange(pData2);
+                foreach (var item in pData2) {
+                    if (item.isNameUnderlined)
+                        if (PerechenOperations.IsLineLastOnPage(wholePerechen.Count + 1)) wholePerechen.Add(new PerechenItem());
+                    wholePerechen.Add(item);
+                }
             }
 
             if (numOfSpecificationStrings > 1)

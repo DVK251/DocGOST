@@ -29,8 +29,12 @@ namespace DocGOST
 {
     class PerechenOperations
     {
-        const int perech_first_page_rows_count = 23;
-        const int perech_subseq_page_rows_count = 29;
+        const int perech_first_page_rows_count = 23; // число строк в перечне на 1-ом листе
+        const int perech_subseq_page_rows_count = 29;// -//- на остальных листах
+
+        public static bool IsLineLastOnPage(int line) {
+            return (line == perech_first_page_rows_count) || ((line - perech_first_page_rows_count) % perech_subseq_page_rows_count == 0);
+        }
 
         private long GetDesignatorValue(string designator)
         {
@@ -263,7 +267,7 @@ namespace DocGOST
             }
 
             var rslt = new List<PerechenItem>(pData.Count);
-            for (int i = 0; i < listpi.Count - 1; i++) {
+            for (int i = 0; i < listpi.Count; i++) {
                 var curItem = listpi[i];
                 var cnt = Int32.Parse(curItem.quantity);
                 if (cnt > 1) {
