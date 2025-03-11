@@ -33,9 +33,9 @@
                 <MenuItem x:Name="saveProjectMenuItem" Header="Сохранить проект" Click="SaveProject_Click" IsEnabled="False" InputGestureText="Ctrl+S">
                 </MenuItem>
                 <Separator />
-                <MenuItem x:Name="importMenuItem" Header="Импорт данных" IsEnabled="False">
-                    <MenuItem x:Name="importPrjPcbfromADMenuItem" Header="Altium Designer" Click="ImportPrjPcbfromAD_Click"></MenuItem>
-                    <MenuItem x:Name="importPrjfromKiCadMenuItem" Header="KiCad" Click="ImportPrjfromKiCad_Click"></MenuItem>
+                <MenuItem x:Name="importMenuItem" Header="Импорт данных" IsEnabled="true">
+                    <MenuItem x:Name="importPrjPcbfromADMenuItem" Header="Altium Designer" Click="ImportPrjPcbfromAD_Click" IsEnabled="false"></MenuItem>
+                    <MenuItem x:Name="importPrjfromKiCadMenuItem" Header="KiCad" Click="ImportPrjfromKiCad_Click" IsEnabled="false"></MenuItem>
                     <Separator />
                     <MenuItem x:Name="importPrjfromMentorMenuItem" Header="Mentor Csv" Click="ImportPrjfromMentor_Click"></MenuItem>
                 </MenuItem>
@@ -69,12 +69,15 @@
             </TreeView>
             <GridSplitter Grid.Row="1" Grid.ColumnSpan="1" ResizeDirection="Rows" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
             <StackPanel Grid.Column="0" Grid.Row="2" >
-                <Label Content="Редактирование"/>
+                <Label Content="Редактирование" FontWeight="Bold"/>
                 <Button Content="Основная надпись" x:Name="osnNadpisButton" Margin="10,5,10,5" IsEnabled="False" Click="osnNadpisButton_Click"/>
                 <Button x:Name="desigDescrButton" Content="Поз. обозначения" Margin="10,5,10,5" Click="desigDescrButton_Click"/>
-                <Label Content="Настройки экспорта в pdf"/>
+                <Label Content="Настройки экспорта в pdf" FontWeight="Bold"/>
                 <CheckBox x:Name="addListRegistrCheckBox" Content="Добавить ЛР" IsChecked="True" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="startFromSecondCheckBox" Content="Нумерация листов с 2" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
+                <CheckBox x:Name="chkExportPerechen" Content="Экспортировать перечень элементов" IsChecked="True" Margin="10,10,0,0" HorizontalAlignment="Left"/>
+                <CheckBox x:Name="chkExportSpec" Content="Экспортировать спецификацию" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
+                <CheckBox x:Name="chkExportVedomost" Content="Экспортировать ведомость" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <Label x:Name="numberOfValidStringsLabel"/>
             </StackPanel>
         </Grid>

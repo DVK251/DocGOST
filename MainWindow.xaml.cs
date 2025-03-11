@@ -28,11 +28,6 @@ using System.IO;
 using Microsoft.Win32;
 using DocGOST.Data;
 using DocGOST.Utils;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.Security.Permissions;
 
 namespace DocGOST
 {
@@ -98,9 +93,7 @@ namespace DocGOST
             closeBinding.Executed += ExitMenuItem_Click;
             this.CommandBindings.Add(closeBinding);
 
-            // _DDD
-            CreateProject("D:\\Проект.docGOST");
-            ImportPrjfromMentor("d:\\WaveGen.txt");
+            //ImportPrjfromMentor("d:\\WaveGen.txt");
         }
 
         string projectPath;
@@ -154,6 +147,8 @@ namespace DocGOST
 
             projectTreeViewItem.ExpandSubtree();
 
+            project?.Dispose();
+
             if (File.Exists(projectPath))
             {
                 File.Delete(projectPath);
@@ -167,7 +162,8 @@ namespace DocGOST
             DisplayVedomostValues(null);
             DisplayPcbSpecValues(null);
 
-            importMenuItem.IsEnabled = true;
+            importPrjPcbfromADMenuItem.IsEnabled = true;
+            importPrjfromKiCadMenuItem.IsEnabled = true;
             osnNadpisMenuItem.IsEnabled = true;
             osnNadpisButton.IsEnabled = true;
 
@@ -213,14 +209,12 @@ namespace DocGOST
         {
             waitMessageLabel.Content = "Подождите, проект открывается. Это может занять несколько минут...";
             waitGrid.Visibility = Visibility.Visible;
-
-            OpenFileDialog openDlg = new OpenFileDialog();
-            openDlg.Title = "Выбор файла проекта";
-            openDlg.Multiselect = false;
-            openDlg.Filter = "Файлы проекта (*.docGOST)|*.docGOST";
-            if (openDlg.ShowDialog() == true)
-            {
-
+            try { 
+                OpenFileDialog openDlg = new OpenFileDialog();
+                openDlg.Title = "Выбор файла проекта";
+                openDlg.Multiselect = false;
+                openDlg.Filter = "Файлы проекта (*.docGOST)|*.docGOST";
+                if (openDlg.ShowDialog() != true) return;
 
                 MessageBoxResult closingDialogResult = MessageBoxResult.No;
                 if ((perTempSave != null) & (specTempSave != null) & (pcbSpecTempSave != null) & (vedomostTempSave != null))
@@ -231,16 +225,18 @@ namespace DocGOST
                     (vedomostTempSave.GetCurrent() != vedomostTempSave.GetLastSavedState()))
                     {
                         closingDialogResult = MessageBox.Show("Проект не сохранён. Сохранить проект перед закрытием?", "Сохранение проекта", MessageBoxButton.YesNoCancel);
-                        if (closingDialogResult == MessageBoxResult.Yes) project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                        if (closingDialogResult == MessageBoxResult.Yes) 
+                            project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                        else if (closingDialogResult == MessageBoxResult.Cancel)
+                            return;
                     }
                     project.DeleteTempData();
                 }
 
                 if (closingDialogResult != MessageBoxResult.Cancel)
                 {
-
-
                     projectPath = openDlg.FileName;
+                    project?.Dispose();
                     project = new Data.ProjectDB(projectPath);
 
                     perTempSave = new TempSaves();
@@ -324,59 +320,66 @@ namespace DocGOST
 
                     //Копируем данные во временные
                     perTempSave = new TempSaves();
-                    for (int i = 1; i <= project.GetPerechenLength(0); i++)
-                    {
-                        PerechenItem perItem = new PerechenItem();
-                        perItem = project.GetPerechenItem(i, 0);
-                        perItem.id = id.makeID(i, perTempSave.GetCurrent());
-                        project.AddPerechenItem(perItem);
-                    }
-                    perTempSave.ProjectSaved();
+                    project.BeginTransaction();
+                    try { 
+                        var len = project.GetPerechenLength(0);
+                        for (int i = 1; i <= len; i++)
+                        {
+                            PerechenItem perItem = new PerechenItem();
+                            perItem = project.GetPerechenItem(i, 0);
+                            perItem.id = id.makeID(i, perTempSave.GetCurrent());
+                            project.AddPerechenItem(perItem);
+                        }
+                        perTempSave.ProjectSaved();
 
-                    for (int i = 1; i <= project.GetSpecLength(0); i++)
-                    {
-                        SpecificationItem specItem = new SpecificationItem();
-                        specItem = project.GetSpecItem(i, 0);
-                        specItem.id = id.makeID(i, specTempSave.GetCurrent());
-                        project.AddSpecItem(specItem);
-                    }
-                    specTempSave.ProjectSaved();
+                        len = project.GetSpecLength(0);
+                        for (int i = 1; i <= len; i++)
+                        {
+                            SpecificationItem specItem = new SpecificationItem();
+                            specItem = project.GetSpecItem(i, 0);
+                            specItem.id = id.makeID(i, specTempSave.GetCurrent());
+                            project.AddSpecItem(specItem);
+                        }
+                        specTempSave.ProjectSaved();
 
-                    for (int i = 1; i <= project.GetVedomostLength(0); i++)
-                    {
-                        VedomostItem vedomostItem = new VedomostItem();
-                        vedomostItem = project.GetVedomostItem(i, 0);
-                        vedomostItem.id = id.makeID(i, specTempSave.GetCurrent());
-                        project.AddVedomostItem(vedomostItem);
-                    }
-                    vedomostTempSave.ProjectSaved();
+                        len = project.GetVedomostLength(0);
+                        for (int i = 1; i <= len; i++)
+                        {
+                            VedomostItem vedomostItem = new VedomostItem();
+                            vedomostItem = project.GetVedomostItem(i, 0);
+                            vedomostItem.id = id.makeID(i, specTempSave.GetCurrent());
+                            project.AddVedomostItem(vedomostItem);
+                        }
+                        vedomostTempSave.ProjectSaved();
 
-                    if (isPcbMultilayer)
-                    {
-
-                        for (int i = 1; i <= project.GetPcbSpecLength(0); i++)
+                        if (isPcbMultilayer)
+                        {
+                            len = project.GetPcbSpecLength(0);
+                            for (int i = 1; i <= len; i++)
+                            {
+                                PcbSpecificationItem specItem = new PcbSpecificationItem();
+                                specItem = project.GetPcbSpecItem(i, 0);
+                                specItem.id = id.makeID(i, pcbSpecTempSave.GetCurrent());
+                                project.AddPcbSpecItem(specItem);
+                            }
+                            pcbSpecTempSave.ProjectSaved();
+                        }
+                        else
                         {
                             PcbSpecificationItem specItem = new PcbSpecificationItem();
-                            specItem = project.GetPcbSpecItem(i, 0);
-                            specItem.id = id.makeID(i, pcbSpecTempSave.GetCurrent());
+                            specItem.id = id.makeID(0, pcbSpecTempSave.GetCurrent());
                             project.AddPcbSpecItem(specItem);
+
+                            //((TreeViewItem)(projectTreeViewItem.Items[0])).Items.RemoveAt(((TreeViewItem)(projectTreeViewItem.Items[0])).Items.Count - 1);
                         }
-                        pcbSpecTempSave.ProjectSaved();
+                    } finally {
+                        project.Commit();
                     }
-                    else
-                    {
-                        PcbSpecificationItem specItem = new PcbSpecificationItem();
-                        specItem.id = id.makeID(0, pcbSpecTempSave.GetCurrent());
-                        project.AddPcbSpecItem(specItem);
-
-                        //((TreeViewItem)(projectTreeViewItem.Items[0])).Items.RemoveAt(((TreeViewItem)(projectTreeViewItem.Items[0])).Items.Count - 1);
-                    }
-
-
 
                     DisplayAllValues();
 
-                    importMenuItem.IsEnabled = true;
+                    importPrjPcbfromADMenuItem.IsEnabled = true;
+                    importPrjfromKiCadMenuItem.IsEnabled = true;
                     saveProjectMenuItem.IsEnabled = true;
                     undoMenuItem.IsEnabled = true;
                     redoMenuItem.IsEnabled = true;
@@ -385,11 +388,8 @@ namespace DocGOST
                     osnNadpisButton.IsEnabled = true;
 
                 }
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
-                waitGrid.Visibility = Visibility.Hidden;
             }
-            else
-            {
+            finally { 
                 waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
@@ -2248,6 +2248,7 @@ namespace DocGOST
             waitMessageLabel.Content = "Подождите, импорт данных...";
             waitGrid.Visibility = Visibility.Visible;
             try { 
+                CreateProject( Path.ChangeExtension(pcbPrjFilePath, ".docGOST") );
                 ImportPrjfromMentorCsv(pcbPrjFilePath);
             } catch (Exception ex) {
                 ShowError(ex.Message);
@@ -2260,8 +2261,8 @@ namespace DocGOST
         private void ImportPrjfromMentorCsv(string pcbPrjFilePath) {
             const int HDR_LINE_CNT = 13;
             const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
-            const int HDR_IDX_SHIFR = 4; 
             const int HDR_IDX_SCH_NAME = 2; // Имя схемы
+            const int HDR_IDX_SHIFR = 4; 
             const int HDR_IDX_ISPOLNITEL = 6; // Исполнитель
             const int HDR_IDX_PROVERIL = 7; // Проверил
             const int HDR_IDX_UTVERDIL = 8; // Утвердил
@@ -2271,7 +2272,7 @@ namespace DocGOST
             const int LINE_PIDX_N = 0; // индекс колонки (0+) внутри строки основной части CSV-файла, в которой располагается порядковый номер
             const int LINE_PIDX_PART_NUMBER = 1;
             //const int LINE_PIDX_VALUE = 2;
-            //const int LINE_PIDX_QTY = 3;
+            const int LINE_PIDX_QTY = 3;
             const int LINE_PIDX_REFDES = 4;
             const int LINE_PIDX_MANUFACTURER = 5;
             const int LINE_PIDX_PN = 6;
@@ -2335,6 +2336,7 @@ namespace DocGOST
                     while (!dataFile.Eof()) {
                         SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
                         SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
+                        SA[LINE_PIDX_QTY].ToInt32(1, 1);
                         var componentPropList = new List<ComponentProperties>() {
                             new ComponentProperties() {
                                 Name = nameName,
@@ -2693,6 +2695,10 @@ namespace DocGOST
                         tempPcbSpecification.group = group;
                         tempVedomost.group = group;
                         tempVedomost.groupPlural = tempPerechen.groupPlural;
+                    }
+                    else {
+                        var r = MessageBox.Show($"Не удалось определить, к какой группе принадлежит элемент '{tempPerechen.designator}'", "Ошибка", MessageBoxButton.OKCancel, MessageBoxImage.Error);
+                        if (r == MessageBoxResult.Cancel) return;
                     }
 
                     tempSpecification.name = group + " " + tempSpecification.name + " " + tempSpecification.docum;
@@ -3067,37 +3073,47 @@ namespace DocGOST
         /// <summary> Создание PDF-файлов перечня и спецификации </summary>
         private void CreatePdf_Click(object sender, RoutedEventArgs e)
         {
-            string pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
-            PdfOperations pdf = new PdfOperations(projectPath);
+            if (chkExportPerechen.IsChecked == false && chkExportSpec.IsChecked == false && chkExportVedomost.IsChecked == false) { 
+                ShowError("Нужно выбрать хотя бы один вариант вывода");
+                return;
+            }
+
             int startPage = (startFromSecondCheckBox.IsChecked == false) ? 1 : 2;
             bool addListRegistr = (addListRegistrCheckBox.IsChecked == true);
-            pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
-            System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
-            pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
-            pdf = new PdfOperations(projectPath);
-            pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
-            System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
-
-            pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
-            pdf = new PdfOperations(projectPath);
-            pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
-            System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
-
-            if (isPcbMultilayer == true) //есил плата - сборочная единица
-            {
-                pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
-                pdf = new PdfOperations(projectPath);
-                pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
+            if (chkExportPerechen.IsChecked == true) { 
+                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
+                var pdf = new PdfOperations(projectPath);
+                pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
                 System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
             }
 
+            if (chkExportSpec.IsChecked == true) {
+                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
+                var pdf = new PdfOperations(projectPath);
+                pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
+                System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+
+                if (isPcbMultilayer == true) // если плата - сборочная единица
+                {
+                    pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
+                    pdf = new PdfOperations(projectPath);
+                    pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
+                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                }
+            }
+
+            if (chkExportVedomost.IsChecked == true) {
+                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
+                var pdf = new PdfOperations(projectPath);
+                pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
+                System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+            }
         }
 
         /// <summary> При закрытии окна программы выполняется проверка, сохранён ли проект, и показывается соответствующее диалоговое окно </summary>        
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            MessageBoxResult closingDialogResult = new MessageBoxResult();
             if ((perTempSave != null) & (specTempSave != null) & (vedomostTempSave != null) & (pcbSpecTempSave != null))
             {
                 if ((perTempSave.GetCurrent() != perTempSave.GetLastSavedState()) |
@@ -3105,8 +3121,13 @@ namespace DocGOST
                     (vedomostTempSave.GetCurrent() != vedomostTempSave.GetLastSavedState()) |
                     (pcbSpecTempSave.GetCurrent() != pcbSpecTempSave.GetLastSavedState()))
                 {
-                    closingDialogResult = MessageBox.Show("Проект не сохранён. Сохранить проект перед закрытием?", "Сохранение проекта", MessageBoxButton.YesNo);
-                    if (closingDialogResult == MessageBoxResult.Yes) project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                    var closingDialogResult = MessageBox.Show("Проект не сохранён. Сохранить проект перед закрытием?", "Сохранение проекта", MessageBoxButton.YesNoCancel);
+                    if (closingDialogResult == MessageBoxResult.Yes) 
+                        project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                    else if (closingDialogResult == MessageBoxResult.Cancel) { 
+                        e.Cancel = true;
+                        return;
+                    }
                 }
                 project.DeleteTempData();
             }
@@ -3981,10 +4002,10 @@ namespace DocGOST
         {
             if (saveProjectMenuItem.IsEnabled == true)
             {
-                project.BeginTransaction();
-                try { 
-                    project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
+                project.Save(perTempSave.GetCurrent(), specTempSave.GetCurrent(), vedomostTempSave.GetCurrent(), pcbSpecTempSave.GetCurrent());
 
+                project.BeginTransaction();
+                try {
                     perTempSave.ProjectSaved();
                     specTempSave.ProjectSaved();
                     pcbSpecTempSave.ProjectSaved();
@@ -4025,7 +4046,6 @@ namespace DocGOST
                 DisplayAllValues();
             }
         }
-
 
         /// <summary> Возврат действия </summary>
         private void RedoButton_Click(object sender, RoutedEventArgs e)

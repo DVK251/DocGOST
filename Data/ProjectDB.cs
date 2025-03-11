@@ -24,7 +24,7 @@ using System.Collections.Generic;
 
 namespace DocGOST.Data
 {
-    class ProjectDB /*: IDisposable*/
+    class ProjectDB : IDisposable
     {
         SQLiteConnection db;
 
@@ -68,53 +68,58 @@ namespace DocGOST.Data
             //Удаление сохранённых ранее данных:
             db.Table<PerechenItem>().Delete(x => x.id < Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
 
-            //Сохранение текущих элементов:
-            int perLength = GetPerechenLength(perTempNumber);
-            for (int i = 1; i <= perLength; i++)
-            {
-                PerechenItem perItem = new PerechenItem();
-                perItem = GetPerechenItem(i, perTempNumber);
-                perItem.id = i;
-                AddPerechenItem(perItem);
-            }
+            BeginTransaction();
+            try { 
+                //Сохранение текущих элементов:
+                int perLength = GetPerechenLength(perTempNumber);
+                for (int i = 1; i <= perLength; i++)
+                {
+                    PerechenItem perItem = new PerechenItem();
+                    perItem = GetPerechenItem(i, perTempNumber);
+                    perItem.id = i;
+                    AddPerechenItem(perItem);
+                }
 
-            //Спецификация:
-            //Удаление сохранённых ранее данных:
-            db.Table<SpecificationItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
-            //Сохранение текущих элементов:
-            int specLength = GetSpecLength(specTempNumber);
-            for (int i = 1; i <= specLength; i++)
-            {
-                SpecificationItem specItem = new SpecificationItem();
-                specItem = GetSpecItem(i, specTempNumber);
-                specItem.id = i;
-                AddSpecItem(specItem);
-            }
+                //Спецификация:
+                //Удаление сохранённых ранее данных:
+                db.Table<SpecificationItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
+                //Сохранение текущих элементов:
+                int specLength = GetSpecLength(specTempNumber);
+                for (int i = 1; i <= specLength; i++)
+                {
+                    SpecificationItem specItem = new SpecificationItem();
+                    specItem = GetSpecItem(i, specTempNumber);
+                    specItem.id = i;
+                    AddSpecItem(specItem);
+                }
 
-            //Ведомость:
-            //Удаление сохранённых ранее данных:
-            db.Table<VedomostItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
-            //Сохранение текущих элементов:
-            int vedomostLength = GetVedomostLength(vedomostTempNumber);
-            for (int i = 1; i <= vedomostLength; i++)
-            {
-                VedomostItem vedomostItem = new VedomostItem();
-                vedomostItem = GetVedomostItem(i, vedomostTempNumber);
-                vedomostItem.id = i;
-                AddVedomostItem(vedomostItem);
-            }
+                //Ведомость:
+                //Удаление сохранённых ранее данных:
+                db.Table<VedomostItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
+                //Сохранение текущих элементов:
+                int vedomostLength = GetVedomostLength(vedomostTempNumber);
+                for (int i = 1; i <= vedomostLength; i++)
+                {
+                    VedomostItem vedomostItem = new VedomostItem();
+                    vedomostItem = GetVedomostItem(i, vedomostTempNumber);
+                    vedomostItem.id = i;
+                    AddVedomostItem(vedomostItem);
+                }
 
-            //Спецификация на печатную плату:
-            //Удаление сохранённых ранее данных:
-            db.Table<PcbSpecificationItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
-            //Сохранение текущих элементов:
-            int pcbSpecLength = GetPcbSpecLength(pcbSpecTempNumber);
-            for (int i = 1; i <= pcbSpecLength; i++)
-            {
-                PcbSpecificationItem specItem = new PcbSpecificationItem();
-                specItem = GetPcbSpecItem(i, pcbSpecTempNumber);
-                specItem.id = i;
-                AddPcbSpecItem(specItem);
+                //Спецификация на печатную плату:
+                //Удаление сохранённых ранее данных:
+                db.Table<PcbSpecificationItem>().Delete(x => x.id <= Global.TempStartPosMask); //Удаляем все элементы, у которых tempNum = 0
+                //Сохранение текущих элементов:
+                int pcbSpecLength = GetPcbSpecLength(pcbSpecTempNumber);
+                for (int i = 1; i <= pcbSpecLength; i++)
+                {
+                    PcbSpecificationItem specItem = new PcbSpecificationItem();
+                    specItem = GetPcbSpecItem(i, pcbSpecTempNumber);
+                    specItem.id = i;
+                    AddPcbSpecItem(specItem);
+                }
+            } finally {
+                Commit();
             }
         }
 
@@ -532,10 +537,12 @@ namespace DocGOST.Data
             SaveParameterItem(paramItem);
         }
 
-        //public void Dispose() {
-        //    db?.Dispose();
-        //}
+        public void Dispose() {
+            db?.Dispose();
+        }
 
         #endregion
+
+
     }
 }
