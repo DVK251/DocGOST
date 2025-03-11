@@ -65,6 +65,9 @@ namespace DocGOST
         {
             InitializeComponent();
 
+            var Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            Title += " v" + Version.ToString(2);
+
             Application.Current.MainWindow.WindowState = WindowState.Maximized;
 
             id = new Global();
