@@ -2235,13 +2235,20 @@ namespace DocGOST
             MessageBox.Show(text, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
+        OpenFileDialog ImportPrjfromMentor_openDlg;
         private void ImportPrjfromMentor_Click(object sender, RoutedEventArgs e) {
-            OpenFileDialog openDlg = new OpenFileDialog();
-            openDlg.Title = "Выбор CSV-файла, экспортированного из Mentor";
-            openDlg.Multiselect = false;
-            openDlg.Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"; 
-            if (openDlg.ShowDialog() == false) return;
-            ImportPrjfromMentor(openDlg.FileName);
+            if (ImportPrjfromMentor_openDlg == null) { 
+                ImportPrjfromMentor_openDlg = new OpenFileDialog() {
+                    Title = "Выбор CSV-файла, экспортированного из Mentor",
+                    Multiselect = false,
+                    Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"
+                };
+            }
+            else
+                ImportPrjfromMentor_openDlg.FileName = ImportPrjfromMentor_openDlg.SafeFileName;
+
+            if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
+            ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName);
         }
 
         void ImportPrjfromMentor(string pcbPrjFilePath) {
