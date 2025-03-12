@@ -73,7 +73,7 @@
                 <Button Content="Основная надпись" x:Name="osnNadpisButton" Margin="10,5,10,5" IsEnabled="False" Click="osnNadpisButton_Click"/>
                 <Button x:Name="desigDescrButton" Content="Поз. обозначения" Margin="10,5,10,5" Click="desigDescrButton_Click"/>
                 <Label Content="Настройки экспорта в pdf" FontWeight="Bold"/>
-                <CheckBox x:Name="addListRegistrCheckBox" Content="Добавить ЛР" IsChecked="True" Margin="10,0,0,0" HorizontalAlignment="Left"/>
+                <CheckBox x:Name="addListRegistrCheckBox" Content="Добавить лист регистрации изменений" IsChecked="True" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="startFromSecondCheckBox" Content="Нумерация листов с 2" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="chkExportPerechen" Content="Экспортировать перечень элементов" IsChecked="True" Margin="10,10,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="chkExportSpec" Content="Экспортировать спецификацию" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>

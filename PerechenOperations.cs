@@ -282,7 +282,7 @@ namespace DocGOST
                 if (i == 0 || curItem.group != listpi[i-1].group) {
                     rslt.Add( new PerechenItem() );
                     if ( (i == listpi.Count - 1) || (curItem.group != listpi[i+1].group) ) {
-                        curItem.name = curItem.group + " " + curItem.name;
+                        curItem.name = (cnt == 1 ? curItem.group : curItem.groupPlural) + " " + curItem.name;
                         rslt.Add(curItem);
                     }
                     else {

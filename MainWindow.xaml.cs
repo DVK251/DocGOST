@@ -66,7 +66,7 @@ namespace DocGOST
             InitializeComponent();
 
             var Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            Title += " v" + Version.ToString(2);
+            Title += " v" + Version.ToString(3);
 
             Application.Current.MainWindow.WindowState = WindowState.Maximized;
 
@@ -393,7 +393,6 @@ namespace DocGOST
                 }
             }
             finally { 
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
         }
@@ -553,12 +552,10 @@ namespace DocGOST
                 string pcbPrjFilePath = openDlg.FileName;
 
                 ImportPrjPcbfromAD(pcbPrjFilePath);
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
             else
             {
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
 
@@ -1462,12 +1459,10 @@ namespace DocGOST
                 string pcbPrjFilePath = openDlg.FileName;
 
                 ImportPrjfromKiCad(pcbPrjFilePath);
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
             else
             {
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
                 waitGrid.Visibility = Visibility.Hidden;
             }
         }
@@ -2250,21 +2245,22 @@ namespace DocGOST
             else
                 ImportPrjfromMentor_openDlg.FileName = ImportPrjfromMentor_openDlg.SafeFileName;
 
-            if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
-            ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName);
-        }
-
-        void ImportPrjfromMentor(string pcbPrjFilePath) {
             waitMessageLabel.Content = "Подождите, импорт данных...";
             waitGrid.Visibility = Visibility.Visible;
             try { 
-                CreateProject( Path.ChangeExtension(pcbPrjFilePath, ".docGOST") );
+                if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
+                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName);
+            } finally {
+                waitGrid.Visibility = Visibility.Hidden;
+            }
+        }
+
+        void ImportPrjfromMentor(string pcbPrjFilePath) {
+            try {
+                CreateProject(Path.ChangeExtension(pcbPrjFilePath, ".docGOST"));
                 ImportPrjfromMentorCsv(pcbPrjFilePath);
             } catch (Exception ex) {
                 ShowError(ex.Message);
-            } finally {
-                waitMessageLabel.Content = "Пожалуйста, подождите...";
-                waitGrid.Visibility = Visibility.Hidden;
             }
         }
 
