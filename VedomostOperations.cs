@@ -99,6 +99,7 @@ namespace DocGOST
                     if (groupList.Count > 1)
                     {
                         tempItem.name = groupList[0].groupPlural;
+                        tempItem.isNameUnderlined = true;
                         tempList1.Add(tempItem);
                         groupList = groupList.OrderBy(x => x.name).ToList();
                         for (int j = 0; j < groupList.Count; j++) tempList1.Add(groupList[j]);
@@ -131,6 +132,7 @@ namespace DocGOST
                     if (groupList.Count > 1)
                     {
                         tempItem.name = groupList[0].groupPlural;
+                        tempItem.isNameUnderlined = true;
                         tempList1.Add(tempItem);
                         groupList = groupList.OrderBy(x => x.name).ToList();
                         for (int j = 0; j < groupList.Count; j++) tempList1.Add(groupList[j]);

@@ -2208,7 +2208,7 @@ namespace DocGOST
             BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);            
             Font normal = new Font(fontGostA, 12f, Font.ITALIC, BaseColor.BLACK);
             Font header = new Font(fontGostA, 14f, Font.ITALIC, BaseColor.BLACK);
-            Font underline = new Font(fontGostA, 14f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK);
+            Font underline = new Font(fontGostA, 14f, Font.UNDERLINE | Font.ITALIC, BaseColor.BLACK); 
 
             //Размеры в соответствии с формой 5 Приложения А ГОСТ 2.106-96
 
@@ -2329,7 +2329,8 @@ namespace DocGOST
                     {
                         currentCell.Phrase = new Phrase(" ", normal);
                         currentCell.Phrase.Add(new Phrase(vData[j].name, (vData[j].isNameUnderlined == true) ? underline : normal));
-
+                        if (vData[j].isNameUnderlined)
+                            currentCell.VerticalAlignment = Element.ALIGN_TOP; // иначе подчёркивание будет располагаться прямо на границе между строками
                     }
                     else if (i == 2) currentCell.Phrase = new Phrase(' ' + vData[j].kod, normal);
                     else if (i == 3) currentCell.Phrase = new Phrase(vData[j].docum, normal);
@@ -2347,14 +2348,10 @@ namespace DocGOST
                     else if (i == 10) currentCell.Phrase = new Phrase(vData[j].note, normal);
                     else currentCell.Phrase = new Phrase(String.Empty, normal);
                     currentCell.FixedHeight = rowsHeight * mm_A3;
-
-                    
-                    
-                    
+                     
                     //Для графы "Наименование" устанавливаем выравниванеие по левому краю:
-                    if (i == 1) currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
+                    if (i == 1 && (j < numberOfValidStrings && !vData[j].isNameUnderlined)) currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
                     else currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
-
                    
                     vedomostTable.AddCell(currentCell);
                 }

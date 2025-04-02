@@ -387,6 +387,7 @@ namespace DocGOST
                     undoMenuItem.IsEnabled = true;
                     redoMenuItem.IsEnabled = true;
                     createPdfMenuItem.IsEnabled = true;
+                    btnCreatePdf.IsEnabled = true;
                     osnNadpisMenuItem.IsEnabled = true;
                     osnNadpisButton.IsEnabled = true;
 
@@ -411,6 +412,7 @@ namespace DocGOST
             List<ComponentProperties> otherPropList = new List<ComponentProperties>();
 
             createPdfMenuItem.IsEnabled = true;
+            btnCreatePdf.IsEnabled = true;
 
             List<PerechenItem> perechenList = new List<PerechenItem>();
             List<SpecificationItem> specList = new List<SpecificationItem>();
@@ -1093,6 +1095,7 @@ namespace DocGOST
 
                 #region Заполнение списков для базы данных проекта
                 createPdfMenuItem.IsEnabled = true;
+                btnCreatePdf.IsEnabled = true;
 
                 List<PerechenItem> perechenList = new List<PerechenItem>();
                 List<SpecificationItem> specList = new List<SpecificationItem>();
@@ -1873,6 +1876,7 @@ namespace DocGOST
 
                 #region Заполнение списков для базы данных проекта
                 createPdfMenuItem.IsEnabled = true;
+                btnCreatePdf.IsEnabled = true;
 
                 List<PerechenItem> perechenList = new List<PerechenItem>();
                 List<SpecificationItem> specList = new List<SpecificationItem>();
@@ -2238,7 +2242,7 @@ namespace DocGOST
             if (ImportPrjfromMentor_openDlg == null) { 
                 ImportPrjfromMentor_openDlg = new OpenFileDialog() {
                     Title = "Выбор CSV-файла, экспортированного из Mentor",
-                    Multiselect = false,
+                    Multiselect = true,
                     Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"
                 };
             }
@@ -2249,22 +2253,23 @@ namespace DocGOST
             waitGrid.Visibility = Visibility.Visible;
             try { 
                 if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
-                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName);
+                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileNames);
             } finally {
                 waitGrid.Visibility = Visibility.Hidden;
             }
         }
 
-        void ImportPrjfromMentor(string pcbPrjFilePath) {
+        void ImportPrjfromMentor(string[] pcbPrjFiles) {
             try {
-                CreateProject(Path.ChangeExtension(pcbPrjFilePath, ".docGOST"));
-                ImportPrjfromMentorCsv(pcbPrjFilePath);
+                string fn = pcbPrjFiles.Length == 1 ? Path.ChangeExtension(pcbPrjFiles[0], ".docGOST") : Path.ChangeExtension(pcbPrjFiles[0], null) + "_multi.docGOST";
+                CreateProject(fn);
+                ImportPrjfromMentorCsv(pcbPrjFiles);
             } catch (Exception ex) {
                 ShowError(ex.Message);
             }
         }
 
-        private void ImportPrjfromMentorCsv(string pcbPrjFilePath) {
+        private void ImportPrjfromMentorCsv(string[] pcbPrjFiles) {
             const int HDR_LINE_CNT = 13;
             const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
             const int HDR_IDX_SCH_NAME = 2; // Имя схемы
@@ -2327,45 +2332,47 @@ namespace DocGOST
             //int currentVariant = 0;
             string[] HeaderInfo = new string[HDR_LINE_CNT];
 
-            using (var dataFile = new CsvReader(pcbPrjFilePath, '\t')) {
-                try { 
-                    for (int i = 0; i < HDR_LINE_CNT; i++) {
-                        var s = dataFile.ReadLine();
-                        var pos = s.IndexOf(':');
-                        if (pos == -1)
-                            throw new Exception("Не найден символ ':'");
-                        HeaderInfo[i] = s.Substring(pos + 1).Trim();
-                    }
-                    string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
-                    CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
+            foreach (var fn in pcbPrjFiles) { 
+                using (var dataFile = new CsvReader(fn, '\t')) {
+                    try { 
+                        for (int i = 0; i < HDR_LINE_CNT; i++) {
+                            var s = dataFile.ReadLine();
+                            var pos = s.IndexOf(':');
+                            if (pos == -1)
+                                throw new Exception("Не найден символ ':'");
+                            HeaderInfo[i] = s.Substring(pos + 1).Trim();
+                        }
+                        string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
+                        CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
 
-                    while (!dataFile.Eof()) {
-                        SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
-                        SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
-                        SA[LINE_PIDX_QTY].ToInt32(1, 1);
-                        var componentPropList = new List<ComponentProperties>() {
-                            new ComponentProperties() {
-                                Name = nameName,
-                                Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
-                            },
-                            new ComponentProperties() {
-                                Name = designatorName,
-                                Text = SA[LINE_PIDX_REFDES]
-                            },
-                            new ComponentProperties() {
-                                Name = documName,
-                                Text = ""
-                            },
-                            new ComponentProperties() {
-                                Name = noteName,
-                                Text = SA[LINE_PIDX_MANUFACTURER]
-                            }
-                        };
-                        componentsList.Add(componentPropList);
-                        numberOfStrings++;
+                        while (!dataFile.Eof()) {
+                            SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
+                            SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
+                            SA[LINE_PIDX_QTY].ToInt32(1, 1);
+                            var componentPropList = new List<ComponentProperties>() {
+                                new ComponentProperties() {
+                                    Name = nameName,
+                                    Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
+                                },
+                                new ComponentProperties() {
+                                    Name = designatorName,
+                                    Text = SA[LINE_PIDX_REFDES]
+                                },
+                                new ComponentProperties() {
+                                    Name = documName,
+                                    Text = ""
+                                },
+                                new ComponentProperties() {
+                                    Name = noteName,
+                                    Text = SA[LINE_PIDX_MANUFACTURER]
+                                }
+                            };
+                            componentsList.Add(componentPropList);
+                            numberOfStrings++;
+                        }
+                    } catch (Exception ex) {
+                        throw new Exception(dataFile.MakeExceptionString(ex.Message));
                     }
-                } catch (Exception ex) {
-                    throw new Exception(dataFile.MakeExceptionString(ex.Message));
                 }
             }
             #endregion
@@ -2386,6 +2393,7 @@ namespace DocGOST
 
             #region Заполнение списков для базы данных проекта
             createPdfMenuItem.IsEnabled = true;
+            btnCreatePdf.IsEnabled = true;
 
             List<PerechenItem> perechenList = new List<PerechenItem>();
             List<SpecificationItem> specList = new List<SpecificationItem>();
