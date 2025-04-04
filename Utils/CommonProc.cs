@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Globalization;
 using System.IO.Ports;
 using System.Text;
+using System.Diagnostics;
 
 namespace DocGOST.Utils
 {
@@ -201,6 +202,9 @@ namespace DocGOST.Utils
                 Array.Resize(ref svalues, SA.Length);
             for (int i = 0; i < SA.Length; i++) {
                 svalues[i] = TrimEveryValue ? SA[i].Trim() : SA[i];
+                if (svalues[i].StartsWith("\"") && svalues[i].EndsWith("\"")) {
+                    svalues[i] = svalues[i].Substring(1, svalues[i].Length - 2).Replace("\"\"", "\"");
+                }
             }
             return svalues;
         }
@@ -231,6 +235,85 @@ namespace DocGOST.Utils
 
         public void Dispose() {
             reader.Dispose();
+        }
+    }
+
+    public class CsvWriter : IDisposable
+    {
+        StreamWriter writer;
+        public int nLine { get; private set; }
+        string fileName;
+        char delimiter;
+
+        public CsvWriter(string fileName, char delimiter = ';') {
+            this.fileName = fileName;
+            this.delimiter = delimiter;
+            writer = new StreamWriter(fileName, false, Encoding.GetEncoding(1251));
+            nLine = 0;
+        }
+
+        public void WriteLine(string data) {
+            writer.WriteLine(data);
+            nLine++;
+        }
+
+        public void WriteLineAsDoubles(double[] values) {
+            if (values.Length == 0) return;
+            for (int i = 0; i < values.Length - 1; i++) {
+                writer.Write(DoubleIC.ToStringIC(values[i]));
+                writer.Write(delimiter);
+            }
+            writer.WriteLine(DoubleIC.ToStringIC(values[values.Length - 1]));
+        }
+
+        public static string MakeStringFromDoubles(IEnumerable<double> values, char delimiter = ';') {
+            StringBuilder sb = new StringBuilder();
+            foreach (var d in values) {
+                sb.Append(DoubleIC.ToStringIC(d));
+                sb.Append(delimiter);
+            }
+            if (sb.Length > 0)
+                sb.Remove(sb.Length - 1, 1);
+            return sb.ToString();
+            //sb.Append("\r\n");
+        }
+
+        public static string MakeStringFromInts(IEnumerable<int> values, char delimiter = ';') {
+            StringBuilder sb = new StringBuilder();
+            foreach (var d in values) {
+                sb.Append(d.ToString());
+                sb.Append(delimiter);
+            }
+            if (sb.Length > 0)
+                sb.Remove(sb.Length - 1, 1);
+            return sb.ToString();
+            //sb.Append("\r\n");
+        }
+
+        public static string MakeStringFromStrings(IEnumerable<string> values, char delimiter = ';') {
+            StringBuilder sb = new StringBuilder();
+            foreach (var s in values) {
+                int idx = s.IndexOf(delimiter);
+                int idx2 = s.IndexOf('\"');
+                if (idx >= 0 || idx2 >= 0) {
+                    sb.Append('\"');
+                    if (idx2 >= 0)
+                        sb.Append( s.Replace("\"", "\"\"") );
+                    else
+                        sb.Append(s);
+                    sb.Append('\"');
+                } else
+                    sb.Append(s);
+                sb.Append(delimiter);
+            }
+            if (sb.Length > 0)
+                sb.Remove(sb.Length - 1, 1);
+            return sb.ToString();
+            //sb.Append("\r\n");
+        }
+
+        public void Dispose() {
+            writer.Dispose();
         }
     }
 

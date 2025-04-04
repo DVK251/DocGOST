@@ -40,18 +40,23 @@ namespace DocGOST.Data
         public ProjectDB(string databasePath)
         {
             db = new SQLiteConnection(databasePath);
-            db.CreateTable<PerechenItem>();
-            db.CreateTable<SpecificationItem>();
-            db.CreateTable<VedomostItem>();
-            db.CreateTable<PcbSpecificationItem>();
-            db.CreateTable<OsnNadpisItem>();
-            db.CreateTable<ParameterItem>();
+            db.BeginTransaction();
+            try { 
+                db.CreateTable<PerechenItem>();
+                db.CreateTable<SpecificationItem>();
+                db.CreateTable<VedomostItem>();
+                db.CreateTable<PcbSpecificationItem>();
+                db.CreateTable<OsnNadpisItem>();
+                db.CreateTable<ParameterItem>();
 
-            //Если новый проект, заполняем основную надпись и параметры проекта значениями по умолчанию
-            if (db.Table<OsnNadpisItem>().Where(x => x.grapha == "1a").FirstOrDefault() == null)
-            {
-                FillDefaultValues();
-                FillParameterDefaultValues();
+                //Если новый проект, заполняем основную надпись и параметры проекта значениями по умолчанию
+                if (db.Table<OsnNadpisItem>().Where(x => x.grapha == "1a").FirstOrDefault() == null)
+                {
+                    FillDefaultValues();
+                    FillParameterDefaultValues();
+                }
+            } finally {
+                db.Commit();
             }
 
             id = new Global();

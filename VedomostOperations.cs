@@ -46,6 +46,7 @@ namespace DocGOST
                         tempList[i].quantityTotal = tempList[i].quantityIzdelie;
                         tempList[j].name = string.Empty;
                         tempList[j].note = string.Empty;
+                        tempList[j].auxNote = string.Empty;
                     }
             }
             #endregion
@@ -66,6 +67,7 @@ namespace DocGOST
                     tempItem.group = tempList[i].group;
                     tempItem.groupPlural = tempList[i].groupPlural;
                     tempItem.note = tempList[i].note;
+                    tempItem.auxNote = tempList[i].auxNote;
                     tempList1.Add(tempItem);
                 }
             }
@@ -176,6 +178,7 @@ namespace DocGOST
                             tempItem.quantityIzdelie = tempList[i].quantityIzdelie;
                             tempItem.quantityTotal = tempList[i].quantityTotal;
                             tempItem.note = tempList[i].note;
+                            tempItem.auxNote = tempList[i].auxNote;
                         }
 
                         //Разбираемся с наименованием

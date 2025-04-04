@@ -77,9 +77,9 @@
                 <CheckBox x:Name="startFromSecondCheckBox" Content="Нумерация листов с 2" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="chkExportPerechen" Content="Экспортировать перечень элементов" IsChecked="False" Margin="10,10,0,0" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="chkExportSpec" Content="Экспортировать спецификацию" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
-                <CheckBox x:Name="chkExportVedomost" Content="Экспортировать ведомость" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
+                <CheckBox x:Name="chkExportVedomost" Content="Экспортировать ведомость ПИ" IsChecked="False" Margin="10,0,0,0" HorizontalAlignment="Left"/>
                 <Button x:Name="btnCreatePdf" Content="Экспорт" Margin="10,5,10,5" IsEnabled="False" Click="CreatePdf_Click" />
-                <Label x:Name="numberOfValidStringsLabel"></Label>
+                <Label x:Name="lblnumberOfValidStrings"></Label>
             </StackPanel>
         </Grid>
 

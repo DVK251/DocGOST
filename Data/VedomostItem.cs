@@ -39,6 +39,7 @@ namespace DocGOST.Data
         public string quantityRegul { get; set; } // Количество в комплекты
         public string quantityTotal { get; set; } // Количество, всего
         public string note { get; set; } //Примечание
+        public string auxNote { get; set; } // Дополнительная информация
         public string group { get; set; } // Название группы компонента в ед.ч.
         public string groupPlural { get; set; } //Название группы компонента во мн.ч. 
         //Оформление текста

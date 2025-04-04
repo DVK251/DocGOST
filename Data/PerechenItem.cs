@@ -30,6 +30,7 @@ namespace DocGOST.Data
         public string name { get; set; } // Наименование
         public string quantity { get; set; } // Кол.
         public string note { get; set; } // Примечание
+        public string auxNote { get; set; } // Дополнительная информация
         public string docum { get; set; } // Документ на поставку
         public string type { get; set; } // Тип компонента
         public string group { get; set; } // Название группы компонента в ед.ч.

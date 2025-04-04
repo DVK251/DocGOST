@@ -28,6 +28,8 @@ using System.IO;
 using Microsoft.Win32;
 using DocGOST.Data;
 using DocGOST.Utils;
+using System.Diagnostics;
+using System.Data.Entity.ModelConfiguration.Conventions;
 
 namespace DocGOST
 {
@@ -2243,7 +2245,7 @@ namespace DocGOST
                 ImportPrjfromMentor_openDlg = new OpenFileDialog() {
                     Title = "Выбор CSV-файла, экспортированного из Mentor",
                     Multiselect = true,
-                    Filter = "Mentor export file (*.csv, *.txt)|*.csv;*.txt"
+                    Filter = "Mentor export file (*.txt)|*.txt" + "|" + "Mentor export file (*.csv)|*.csv"
                 };
             }
             else
@@ -2261,7 +2263,15 @@ namespace DocGOST
 
         void ImportPrjfromMentor(string[] pcbPrjFiles) {
             try {
-                string fn = pcbPrjFiles.Length == 1 ? Path.ChangeExtension(pcbPrjFiles[0], ".docGOST") : Path.ChangeExtension(pcbPrjFiles[0], null) + "_multi.docGOST";
+                string fn;
+                if (pcbPrjFiles.Length == 1) 
+                    fn = Path.ChangeExtension(pcbPrjFiles[0], ".docGOST");
+                else { 
+                    var pth = Path.GetDirectoryName(pcbPrjFiles[0]);
+                    var nm = Path.GetFileName(pth);
+                    if (nm == "") nm = "root";
+                    fn = Path.Combine(pth,  nm + ".docGOST");
+                }
                 CreateProject(fn);
                 ImportPrjfromMentorCsv(pcbPrjFiles);
             } catch (Exception ex) {
@@ -2288,15 +2298,16 @@ namespace DocGOST
             const int LINE_PIDX_MANUFACTURER = 5;
             const int LINE_PIDX_PN = 6;
             const int LINE_PIDX_TU = 7;
-            //const int LINE_PIDX_AUX = 8;
+            const int LINE_PIDX_AUX = 8;
 
             perTempSave = new TempSaves();
             specTempSave = new TempSaves();
             vedomostTempSave = new TempSaves();
+            var report = new List<string>();
 
             List<DielProperties> pcbMaterialsList = new List<DielProperties>();
 
-            #region Открытие и парсинг файла проекта Mentor
+            #region Открытие и парсинг файлов Mentor
             int numberOfStrings = 0;
 
             List<List<ComponentProperties>> componentsList = new List<List<ComponentProperties>>();
@@ -2328,54 +2339,112 @@ namespace DocGOST
             const string nameName = "Part Number"; 
             const string documName = "Docum";
             const string noteName = "Note";
+            const string auxName = "Aux";
 
             //int currentVariant = 0;
             string[] HeaderInfo = new string[HDR_LINE_CNT];
 
-            foreach (var fn in pcbPrjFiles) { 
-                using (var dataFile = new CsvReader(fn, '\t')) {
-                    try { 
-                        for (int i = 0; i < HDR_LINE_CNT; i++) {
-                            var s = dataFile.ReadLine();
-                            var pos = s.IndexOf(':');
-                            if (pos == -1)
-                                throw new Exception("Не найден символ ':'");
-                            HeaderInfo[i] = s.Substring(pos + 1).Trim();
+            report.Add($"DocGOST import report from {DateTime.Now}");
+            report.Add("");
+            report.Add($"Files:");
+            var subst_map = new Dictionary<string, (string pn,string tu,string manuf)>();
+            {
+                var fn = Path.Combine(Path.GetDirectoryName(projectPath), "_subst.csv");
+                if (File.Exists(fn)) { 
+                    using (var dataFile = new CsvReader(fn, ';')) {
+                        try {
+                            string[] SA = dataFile.ReadLineAsStrings(4, true); // table header
+                            CommonProc.RaiseIfTrue(SA[0] != "PartNo", "Первая колонка должна называться 'PartNo'");
+                            while (!dataFile.Eof()) {
+                                SA = dataFile.ReadLineAsStrings(4);
+                                if (SA[0] == "") continue;
+                                subst_map.Add(SA[0], (SA[1], SA[2], SA[3]));
+                            }
+                            } catch (Exception ex) {
+                            throw new Exception(dataFile.MakeExceptionString(ex.Message));
                         }
-                        string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
-                        CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
-
-                        while (!dataFile.Eof()) {
-                            SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
-                            SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
-                            SA[LINE_PIDX_QTY].ToInt32(1, 1);
-                            var componentPropList = new List<ComponentProperties>() {
-                                new ComponentProperties() {
-                                    Name = nameName,
-                                    Text = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER]
-                                },
-                                new ComponentProperties() {
-                                    Name = designatorName,
-                                    Text = SA[LINE_PIDX_REFDES]
-                                },
-                                new ComponentProperties() {
-                                    Name = documName,
-                                    Text = ""
-                                },
-                                new ComponentProperties() {
-                                    Name = noteName,
-                                    Text = SA[LINE_PIDX_MANUFACTURER]
-                                }
-                            };
-                            componentsList.Add(componentPropList);
-                            numberOfStrings++;
-                        }
-                    } catch (Exception ex) {
-                        throw new Exception(dataFile.MakeExceptionString(ex.Message));
                     }
                 }
             }
+            foreach (var fn in pcbPrjFiles) {
+                int files_cnt = 1;
+                { // если имя файла оканчивается на "{N}" (где N - целое число), то данный файл считываем N раз
+                    var bfn = Path.GetFileNameWithoutExtension(fn);
+                    int idx1, idx2;
+                    idx1 = bfn.LastIndexOf('{');
+                    idx2 = bfn.LastIndexOf('}');
+                    if (idx1 >= 0 && idx2 >= 0 && idx2 > idx1) {
+                        var scnt = bfn.Substring(idx1 + 1, idx2 - idx1 - 1);
+                        if (int.TryParse(scnt, out int cnt)) {
+                            if (cnt > 0 && cnt < 1000)
+                                files_cnt = cnt;
+                        }
+                    }
+                }
+                int compsPerFile = 0;
+                for (int fcnt = 0; fcnt < files_cnt; fcnt++) {
+                    compsPerFile = 0;
+                    using (var dataFile = new CsvReader(fn, '\t')) {
+                        try { 
+                            for (int i = 0; i < HDR_LINE_CNT; i++) {
+                                var s = dataFile.ReadLine();
+                                var pos = s.IndexOf(':');
+                                if (pos == -1)
+                                    throw new Exception("Не найден символ ':'");
+                                HeaderInfo[i] = s.Substring(pos + 1).Trim();
+                            }
+                            string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
+                            CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
+
+                            while (!dataFile.Eof()) {
+                                SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
+                                SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
+                                SA[LINE_PIDX_QTY].ToInt32(1, 1);
+                                string partNumber = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER];
+                                string manufacturer = SA[LINE_PIDX_MANUFACTURER];
+                                if (subst_map.TryGetValue(partNumber, out var ptm)) { 
+                                    partNumber = ptm.pn + (ptm.tu != "" ? " " + ptm.tu : "");
+                                    manufacturer = ptm.manuf;
+                                }
+
+                                var componentPropList = new List<ComponentProperties>() {
+                                    new ComponentProperties() {
+                                        Name = nameName,
+                                        Text = partNumber
+                                    },
+                                    new ComponentProperties() {
+                                        Name = designatorName,
+                                        Text = SA[LINE_PIDX_REFDES]
+                                    },
+                                    new ComponentProperties() {
+                                        Name = documName,
+                                        Text = ""
+                                    },
+                                    new ComponentProperties() {
+                                        Name = noteName,
+                                        Text = manufacturer
+                                    },
+                                    new ComponentProperties() {
+                                        Name = auxName,
+                                        Text = SA[LINE_PIDX_AUX]
+                                    },
+                                };
+                                componentsList.Add(componentPropList);
+                                numberOfStrings++;
+                                compsPerFile++;
+                            }
+                        } catch (Exception ex) {
+                            throw new Exception(dataFile.MakeExceptionString(ex.Message));
+                        }
+                    } // using
+                } // for
+                report.Add($"{files_cnt} x {Path.GetFileName(fn)} = {files_cnt} x {compsPerFile} = {files_cnt*compsPerFile} components");
+            } // for
+            report.Add("");
+            report.Add($"Total components count = {numberOfStrings}");
             #endregion
+            report.Add("");
+            report.Add("Errors:");
 
             string ExtractShift(string str) {
                 var idx = str.IndexOf(' ');
@@ -2656,17 +2725,18 @@ namespace DocGOST
                     try {
                         prop = (componentsList[i])[j];
 
-                        if (prop.Name == designatorName) tempPerechen.designator = prop.Text;
-
-                        else if (prop.Name == nameName) tempPerechen.name = prop.Text;
-                        else if (prop.Name == documName) tempPerechen.docum = prop.Text;
-                        else if (prop.Name == noteName) tempPerechen.note = prop.Text;
+                        switch (prop.Name) { 
+                            case designatorName: tempPerechen.designator = prop.Text; break;
+                            case nameName: tempPerechen.name = prop.Text; break;
+                            case documName: tempPerechen.docum = prop.Text; break;
+                            case noteName: tempPerechen.note = prop.Text; break;
+                            case auxName: tempPerechen.auxNote = prop.Text; break;
+                        }
                     } catch {
-                        MessageBox.Show(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + numberOfStrings);
+                        report.Add(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + numberOfStrings);
+                        //MessageBox.Show(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + numberOfStrings);
                     }
                 }
-
-
 
                 /*if (isDNF == false)*/ {
 
@@ -2695,6 +2765,7 @@ namespace DocGOST
                     tempVedomost.quantityComplects = String.Empty;
                     tempVedomost.quantityTotal = "1";
                     tempVedomost.note = tempPerechen.note;
+                    tempVedomost.auxNote = tempPerechen.auxNote;
                     tempVedomost.isNameUnderlined = false;
 
                     string group = string.Empty;
@@ -2711,8 +2782,9 @@ namespace DocGOST
                         tempVedomost.groupPlural = tempPerechen.groupPlural;
                     }
                     else {
-                        var r = MessageBox.Show($"Не удалось определить, к какой группе принадлежит элемент '{tempPerechen.designator}'", "Ошибка", MessageBoxButton.OKCancel, MessageBoxImage.Error);
-                        if (r == MessageBoxResult.Cancel) return;
+                        report.Add($"Не удалось определить, к какой группе принадлежит элемент '{tempPerechen.designator}'");
+                        //var r = MessageBox.Show($"Не удалось определить, к какой группе принадлежит элемент '{tempPerechen.designator}'", "Ошибка", MessageBoxButton.OKCancel, MessageBoxImage.Error);
+                        //if (r == MessageBoxResult.Cancel) return;
                     }
 
                     tempSpecification.name = group + " " + tempSpecification.name + " " + tempSpecification.docum;
@@ -2759,7 +2831,7 @@ namespace DocGOST
                 });
                 var blmap = new Dictionary<int, List<PerechenItem>>();
                 foreach (var pi in perechenList) {
-                    int bln = Global.ExtractDesignatorBlockNum( MakeDesignatorForOrdering(pi.designator) );
+                    int bln = Global.ExtractDesignatorBlockNum( MakeDesignatorForOrdering_v2(pi.designator) );
                     if (bln == 0) {
                         hiePerechenBlockList[0].perechenItems.Add(pi);
                         continue;
@@ -2804,9 +2876,9 @@ namespace DocGOST
             List<SpecificationItem> specOtherListSorted = new List<SpecificationItem>();
             List<VedomostItem> vedomostListSorted = new List<VedomostItem>();
 
-            perechenListSorted = perechenList.OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
-            specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
-            vedomostListSorted = vedomostList.OrderBy(x => MakeDesignatorForOrdering(x.designator)).ToList();
+            perechenListSorted = perechenList.OrderBy(x => MakeDesignatorForOrdering_v2(x.designator, report)).ToList();
+            specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
+            vedomostListSorted = vedomostList.OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
 
             for (int i = 0; i < specOtherListSorted.Count; i++) {
                 perechenListSorted[i].id = id.makeID(i + 1, perTempSave.GetCurrent());
@@ -2821,7 +2893,12 @@ namespace DocGOST
             groupByNameSaveAndPrint_v2(hiePerechenBlockList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
 
             //waitGrid.Visibility = Visibility.Hidden;
-
+            var repfn = Path.ChangeExtension(projectPath, null) + "_report.log";
+            using (var fs = new StreamWriter(repfn)) {
+                foreach (var line in report) 
+                    fs.WriteLine(line);
+            }
+            Process.Start(repfn);
         }
 
         //private int MakeDesignatorForOrdering(string designator) {
@@ -2851,9 +2928,12 @@ namespace DocGOST
         /// <summary> Формирование числа типа int для правильной сортировки позиционных обозначений,
         /// так как в случае простой сортировки по алфавиту результат неправильный, например,
         /// сортируется C1, C15, C2 вместо C1, C2, C15.<</summary>
-        private long MakeDesignatorForOrdering(string designator)
-        {
+        private long MakeDesignatorForOrdering(string designator) {
             return Global.GetDesignatorValue(designator, (str) => { ShowError(str); });
+        }
+
+        private long MakeDesignatorForOrdering_v2(string designator, List<string> report = null) {
+            return Global.GetDesignatorValue(designator, (str) => { if (report != null) report.Add(str); });
         }
 
         /// <summary> Чтение строк вида ='Str1'+'Str2' при чтении данных из проекта Altium Designer (.PrjPcb) </summary>
@@ -3087,43 +3167,68 @@ namespace DocGOST
         /// <summary> Создание PDF-файлов перечня и спецификации </summary>
         private void CreatePdf_Click(object sender, RoutedEventArgs e)
         {
-            if (chkExportPerechen.IsChecked == false && chkExportSpec.IsChecked == false && chkExportVedomost.IsChecked == false) { 
-                ShowError("Нужно выбрать хотя бы один вариант вывода");
-                return;
-            }
+            try { 
+                if (chkExportPerechen.IsChecked == false && chkExportSpec.IsChecked == false && chkExportVedomost.IsChecked == false) { 
+                    ShowError("Нужно выбрать хотя бы один вариант вывода");
+                    return;
+                }
 
-            int startPage = (startFromSecondCheckBox.IsChecked == false) ? 1 : 2;
-            bool addListRegistr = (addListRegistrCheckBox.IsChecked == true);
+                int startPage = (startFromSecondCheckBox.IsChecked == false) ? 1 : 2;
+                bool addListRegistr = (addListRegistrCheckBox.IsChecked == true);
 
-            if (chkExportPerechen.IsChecked == true) { 
-                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
-                var pdf = new PdfOperations(projectPath);
-                pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
-                System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
-            }
-
-            if (chkExportSpec.IsChecked == true) {
-                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
-                var pdf = new PdfOperations(projectPath);
-                pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
-                System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
-
-                if (isPcbMultilayer == true) // если плата - сборочная единица
-                {
-                    pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
-                    pdf = new PdfOperations(projectPath);
-                    pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
+                if (chkExportPerechen.IsChecked == true) { 
+                    var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
+                    var pdf = new PdfOperations(projectPath);
+                    pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
                     System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                 }
-            }
 
-            if (chkExportVedomost.IsChecked == true) {
-                var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
-                var pdf = new PdfOperations(projectPath);
-                pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
-                System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                if (chkExportSpec.IsChecked == true) {
+                    var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
+                    var pdf = new PdfOperations(projectPath);
+                    pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
+                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+
+                    if (isPcbMultilayer == true) // если плата - сборочная единица
+                    {
+                        pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
+                        pdf = new PdfOperations(projectPath);
+                        pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
+                        System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                    }
+                }
+
+                if (chkExportVedomost.IsChecked == true) {
+                    var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
+                    var pdf = new PdfOperations(projectPath);
+                    pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
+                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                    CreateVedomostCsv(Path.ChangeExtension(projectPath, null) + " " + "ВП.csv", vedomostTempSave.GetCurrent());
+                }
+            } catch (Exception ex) {
+                ShowError(ex.Message);
             }
         }
+
+        void CreateVedomostCsv(string fileName, int tempNumber) { // Ведомость ПИ для внутреннего использования
+            int numberOfValidStrings = project.GetVedomostLength(tempNumber);
+            List<VedomostItem> vData = new List<VedomostItem>();
+            for (int i = 1; i <= numberOfValidStrings; i++) {
+                vData.Add(project.GetVedomostItem(i, tempNumber));
+            }
+            using (var writer = new CsvWriter(fileName)) {
+                writer.WriteLine( CsvWriter.MakeStringFromStrings(new string[]{ "Part Number", "Quantity", "Manufacturer", "Note" }) );
+                foreach (var item in vData) {
+                    writer.WriteLine( CsvWriter.MakeStringFromStrings( new string[] {
+                        item.isNameUnderlined ? "#### " + item.name : item.name,
+                        item.quantityTotal,  
+                        item.note, 
+                        item.auxNote != null ? item.auxNote.Replace("\\n", "  ") : ""
+                    } ) );
+                }
+            }
+        }
+
 
         /// <summary> При закрытии окна программы выполняется проверка, сохранён ли проект, и показывается соответствующее диалоговое окно </summary>        
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
