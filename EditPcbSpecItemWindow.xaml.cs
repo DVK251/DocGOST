@@ -19,6 +19,7 @@
  */
 
 using DocGOST.Data;
+using System;
 using System.Windows;
 
 namespace DocGOST
@@ -26,7 +27,7 @@ namespace DocGOST
     /// <summary>
     /// Логика взаимодействия для EditSpecItemWindow.xaml
     /// </summary>
-    public partial class EditPcbSpecItemWindow : Window
+    public partial class EditPcbSpecItemWindow : Window, IDisposable
     {
         public EditPcbSpecItemWindow(string projectPath, int strNum, int currentSave, int nextSave)
         {
@@ -74,6 +75,11 @@ namespace DocGOST
 
                 this.DialogResult = true;
             }
+        }
+
+        public void Dispose() {
+            project?.Dispose();
+            project = null;
         }
     }
 }

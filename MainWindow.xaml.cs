@@ -30,6 +30,7 @@ using DocGOST.Data;
 using DocGOST.Utils;
 using System.Diagnostics;
 using System.Data.Entity.ModelConfiguration.Conventions;
+using System.Drawing.Imaging;
 
 namespace DocGOST
 {
@@ -2344,20 +2345,30 @@ namespace DocGOST
             //int currentVariant = 0;
             string[] HeaderInfo = new string[HDR_LINE_CNT];
 
+            void LoadFileHeader(CsvReader dataFile) {
+                for (int i = 0; i < HDR_LINE_CNT; i++) {
+                    var s = dataFile.ReadLine();
+                    var pos = s.IndexOf(':');
+                    if (pos == -1)
+                        throw new Exception("Не найден символ ':'");
+                    HeaderInfo[i] = s.Substring(pos + 1).Trim();
+                }
+            }
+
             report.Add($"DocGOST import report from {DateTime.Now}");
             report.Add("");
             report.Add($"Files:");
             var subst_map = new Dictionary<string, (string pn,string tu,string manuf)>();
             {
-                var fn = Path.Combine(Path.GetDirectoryName(projectPath), "_subst.csv");
+                var fn = Path.Combine( AppDomain.CurrentDomain.BaseDirectory, "Settings", "_subst.csv" );
                 if (File.Exists(fn)) { 
                     using (var dataFile = new CsvReader(fn, ';')) {
                         try {
                             string[] SA = dataFile.ReadLineAsStrings(4, true); // table header
                             CommonProc.RaiseIfTrue(SA[0] != "PartNo", "Первая колонка должна называться 'PartNo'");
                             while (!dataFile.Eof()) {
-                                SA = dataFile.ReadLineAsStrings(4);
-                                if (SA[0] == "") continue;
+                                SA = dataFile.ReadLineAsStrings(4, true);
+                                if (SA[0] == "" || SA[1] == "") continue;
                                 subst_map.Add(SA[0], (SA[1], SA[2], SA[3]));
                             }
                             } catch (Exception ex) {
@@ -2386,13 +2397,7 @@ namespace DocGOST
                     compsPerFile = 0;
                     using (var dataFile = new CsvReader(fn, '\t')) {
                         try { 
-                            for (int i = 0; i < HDR_LINE_CNT; i++) {
-                                var s = dataFile.ReadLine();
-                                var pos = s.IndexOf(':');
-                                if (pos == -1)
-                                    throw new Exception("Не найден символ ':'");
-                                HeaderInfo[i] = s.Substring(pos + 1).Trim();
-                            }
+                            LoadFileHeader(dataFile);
                             string[] SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT); // table header
                             CommonProc.RaiseIfTrue( SA[LINE_PIDX_N] != "#", "Ожидается символ '#' в 1-ой колонке" );
 
@@ -2400,11 +2405,13 @@ namespace DocGOST
                                 SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
                                 SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
                                 SA[LINE_PIDX_QTY].ToInt32(1, 1);
-                                string partNumber = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] + (SA[LINE_PIDX_TU] != "" ? " " + SA[LINE_PIDX_TU] : "") : SA[LINE_PIDX_PART_NUMBER];
+                                string partNumber = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] : SA[LINE_PIDX_PART_NUMBER];
                                 string manufacturer = SA[LINE_PIDX_MANUFACTURER];
+                                string documPost = SA[LINE_PIDX_TU];
                                 if (subst_map.TryGetValue(partNumber, out var ptm)) { 
-                                    partNumber = ptm.pn + (ptm.tu != "" ? " " + ptm.tu : "");
+                                    partNumber = ptm.pn;
                                     manufacturer = ptm.manuf;
+                                    documPost = ptm.tu;
                                 }
 
                                 var componentPropList = new List<ComponentProperties>() {
@@ -2418,7 +2425,7 @@ namespace DocGOST
                                     },
                                     new ComponentProperties() {
                                         Name = documName,
-                                        Text = ""
+                                        Text = documPost
                                     },
                                     new ComponentProperties() {
                                         Name = noteName,
@@ -2442,6 +2449,18 @@ namespace DocGOST
             } // for
             report.Add("");
             report.Add($"Total components count = {numberOfStrings}");
+
+            {
+                var prjfn = Path.Combine( Path.GetDirectoryName(projectPath), "prj.csv"); 
+                if (/*pcbPrjFiles.Length > 1 &&*/ File.Exists(prjfn))
+                    using (var dataFile = new CsvReader(prjfn, '\t')) {
+                        try {
+                            LoadFileHeader(dataFile);
+                        } catch (Exception ex) {
+                            throw new Exception(dataFile.MakeExceptionString(ex.Message));
+                        }
+                    } // using
+            }
             #endregion
             report.Add("");
             report.Add("Errors:");
@@ -2525,6 +2544,7 @@ namespace DocGOST
             tempSpecItem.spSection = (int)Global.SpSections.Documentation;
             specList.Add(tempSpecItem);*/
 
+            project?.Dispose();
             project = new Data.ProjectDB(projectPath);
 
             PcbSpecificationItem tempPcbSpecItem = new PcbSpecificationItem();
@@ -2759,12 +2779,12 @@ namespace DocGOST
                     tempVedomost.name = tempPerechen.name;
                     tempVedomost.kod = String.Empty;
                     tempVedomost.docum = tempPerechen.docum;
-                    tempVedomost.supplier = String.Empty;
+                    tempVedomost.supplier = tempPerechen.note;
                     tempVedomost.belongs = String.Empty;
                     tempVedomost.quantityIzdelie = "1";
                     tempVedomost.quantityComplects = String.Empty;
                     tempVedomost.quantityTotal = "1";
-                    tempVedomost.note = tempPerechen.note;
+                    tempVedomost.note = String.Empty;
                     tempVedomost.auxNote = tempPerechen.auxNote;
                     tempVedomost.isNameUnderlined = false;
 
@@ -3178,30 +3198,30 @@ namespace DocGOST
 
                 if (chkExportPerechen.IsChecked == true) { 
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
-                    var pdf = new PdfOperations(projectPath);
-                    pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
+                    using (var pdf = new PdfOperations(projectPath))
+                        pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
                     System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                 }
 
                 if (chkExportSpec.IsChecked == true) {
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
-                    var pdf = new PdfOperations(projectPath);
-                    pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
+                    using (var pdf = new PdfOperations(projectPath))
+                        pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
                     System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
                     if (isPcbMultilayer == true) // если плата - сборочная единица
                     {
                         pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
-                        pdf = new PdfOperations(projectPath);
-                        pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
+                        using (var pdf = new PdfOperations(projectPath))
+                            pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
                         System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     }
                 }
 
                 if (chkExportVedomost.IsChecked == true) {
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
-                    var pdf = new PdfOperations(projectPath);
-                    pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
+                    using (var pdf = new PdfOperations(projectPath)) 
+                        pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
                     System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     CreateVedomostCsv(Path.ChangeExtension(projectPath, null) + " " + "ВП.csv", vedomostTempSave.GetCurrent());
                 }
@@ -3220,9 +3240,9 @@ namespace DocGOST
                 writer.WriteLine( CsvWriter.MakeStringFromStrings(new string[]{ "Part Number", "Quantity", "Manufacturer", "Note" }) );
                 foreach (var item in vData) {
                     writer.WriteLine( CsvWriter.MakeStringFromStrings( new string[] {
-                        item.isNameUnderlined ? "#### " + item.name : item.name,
+                        item.isNameUnderlined ? "#### " + item.name : item.name + item.docum == "" ? "" : " " + item.docum,
                         item.quantityTotal,  
-                        item.note, 
+                        item.supplier, 
                         item.auxNote != null ? item.auxNote.Replace("\\n", "  ") : ""
                     } ) );
                 }
@@ -3388,12 +3408,12 @@ namespace DocGOST
         /// <summary> Редактирование основной надписи </summary>
         private void osnNadpisButton_Click(object sender, RoutedEventArgs e)
         {
-            OsnNadpisWindow osnNadpis;
-            osnNadpis = new OsnNadpisWindow(projectPath);
-            //Показываем диалоговое окно для заполнения граф основной надписи
-            osnNadpis.ShowDialog();
+            using (OsnNadpisWindow osnNadpis = new OsnNadpisWindow(projectPath)) { 
+                //Показываем диалоговое окно для заполнения граф основной надписи
+                osnNadpis.ShowDialog();
 
-            osnNadpis.Close();
+                //osnNadpis.Close(); 
+            }
         }
 
         /// <summary> Редактирование расшифровок позиционных обозначений </summary>
@@ -3451,32 +3471,32 @@ namespace DocGOST
             int strNum = id.getStrNum((b.CommandParameter as PerechenItem).id);
 
 
-            EditPerechenItemWindow editWindow = new EditPerechenItemWindow(projectPath, strNum, perTempSave.GetCurrent(), perTempSave.GetCurrent() + 1);
-            if (editWindow.ShowDialog() == true)
-            {
-                project.DeletePerechenTempData(perTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
+            using (EditPerechenItemWindow editWindow = new EditPerechenItemWindow(projectPath, strNum, perTempSave.GetCurrent(), perTempSave.GetCurrent() + 1)) { 
+                if (editWindow.ShowDialog() == true)
+                {
+                    project.DeletePerechenTempData(perTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
 
-                project.BeginTransaction();
-                try { 
-                    for (int i = 1; i <= perLength; i++)
-                    {
-                        if (i != strNum)
+                    project.BeginTransaction();
+                    try { 
+                        for (int i = 1; i <= perLength; i++)
                         {
-                            tempPerList[i - 1].id = id.makeID(i, perTempSave.GetCurrent());
-                            project.AddPerechenItem(tempPerList[i - 1]);
+                            if (i != strNum)
+                            {
+                                tempPerList[i - 1].id = id.makeID(i, perTempSave.GetCurrent());
+                                project.AddPerechenItem(tempPerList[i - 1]);
+                            }
+
                         }
 
+                        tempPerList[strNum - 1] = project.GetPerechenItem(strNum, perTempSave.GetCurrent());
+                        project.AddPerechenItem(tempPerList[strNum - 1]);
+                    } finally { 
+                        project.Commit(); 
                     }
 
-                    tempPerList[strNum - 1] = project.GetPerechenItem(strNum, perTempSave.GetCurrent());
-                    project.AddPerechenItem(tempPerList[strNum - 1]);
-                } finally { 
-                    project.Commit(); 
+                    DisplayPerValues(tempPerList);
                 }
-
-                DisplayPerValues(tempPerList);
             }
-
 
         }
 
@@ -3584,28 +3604,29 @@ namespace DocGOST
             int strNum = id.getStrNum((b.CommandParameter as SpecificationItem).id);
             int tempNum = specTempSave.GetCurrent();
 
-            EditSpecItemWindow editWindow = new EditSpecItemWindow(projectPath, strNum, tempNum, specTempSave.GetCurrent() + 1);
-            if (editWindow.ShowDialog() == true)
-            {
-                project.DeleteSpecTempData(specTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
+            using (EditSpecItemWindow editWindow = new EditSpecItemWindow(projectPath, strNum, tempNum, specTempSave.GetCurrent() + 1)) { 
+                if (editWindow.ShowDialog() == true)
+                {
+                    project.DeleteSpecTempData(specTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
 
-                project.BeginTransaction();
-                try {
-                    for (int i = 1; i <= length; i++)
-                    {
-                        if (i != strNum)
+                    project.BeginTransaction();
+                    try {
+                        for (int i = 1; i <= length; i++)
                         {
-                            tempList[i - 1].id = id.makeID(i, specTempSave.GetCurrent());
-                            project.AddSpecItem(tempList[i - 1]);
+                            if (i != strNum)
+                            {
+                                tempList[i - 1].id = id.makeID(i, specTempSave.GetCurrent());
+                                project.AddSpecItem(tempList[i - 1]);
+                            }
+
                         }
-
+                    } finally {
+                        project.Commit();
                     }
-                } finally {
-                    project.Commit();
-                }
-                tempList[strNum - 1] = project.GetSpecItem(strNum, specTempSave.GetCurrent());
+                    tempList[strNum - 1] = project.GetSpecItem(strNum, specTempSave.GetCurrent());
 
-                DisplaySpecValues(tempList);
+                    DisplaySpecValues(tempList);
+                }
             }
         }
 
@@ -3794,32 +3815,32 @@ namespace DocGOST
             int strNum = id.getStrNum((b.CommandParameter as VedomostItem).id);
 
 
-            EditVedomostItemWindow editWindow = new EditVedomostItemWindow(projectPath, strNum, vedomostTempSave.GetCurrent(), vedomostTempSave.GetCurrent() + 1);
-            if (editWindow.ShowDialog() == true)
-            {
-                project.DeleteVedomostTempData(vedomostTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
+            using (EditVedomostItemWindow editWindow = new EditVedomostItemWindow(projectPath, strNum, vedomostTempSave.GetCurrent(), vedomostTempSave.GetCurrent() + 1)) { 
+                if (editWindow.ShowDialog() == true)
+                {
+                    project.DeleteVedomostTempData(vedomostTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения
 
-                project.BeginTransaction();
-                try {
-                    for (int i = 1; i <= vedomostLength; i++)
-                    {
-                        if (i != strNum)
+                    project.BeginTransaction();
+                    try {
+                        for (int i = 1; i <= vedomostLength; i++)
                         {
-                            tempVedomostList[i - 1].id = id.makeID(i, vedomostTempSave.GetCurrent());
-                            project.AddVedomostItem(tempVedomostList[i - 1]);
+                            if (i != strNum)
+                            {
+                                tempVedomostList[i - 1].id = id.makeID(i, vedomostTempSave.GetCurrent());
+                                project.AddVedomostItem(tempVedomostList[i - 1]);
+                            }
+
                         }
 
+                        tempVedomostList[strNum - 1] = project.GetVedomostItem(strNum, vedomostTempSave.GetCurrent());
+                        project.AddVedomostItem(tempVedomostList[strNum - 1]);
+                    } finally {
+                        project.Commit();
                     }
 
-                    tempVedomostList[strNum - 1] = project.GetVedomostItem(strNum, vedomostTempSave.GetCurrent());
-                    project.AddVedomostItem(tempVedomostList[strNum - 1]);
-                } finally {
-                    project.Commit();
+                    DisplayVedomostValues(tempVedomostList);
                 }
-
-                DisplayVedomostValues(tempVedomostList);
             }
-
         }
 
         /// <summary> Добавление к ведомости пустой строки сверху </summary>
@@ -3924,27 +3945,28 @@ namespace DocGOST
             int strNum = id.getStrNum((b.CommandParameter as PcbSpecificationItem).id);
             int tempNum = pcbSpecTempSave.GetCurrent();
 
-            EditPcbSpecItemWindow editWindow = new EditPcbSpecItemWindow(projectPath, strNum, tempNum, pcbSpecTempSave.GetCurrent() + 1);
-            if (editWindow.ShowDialog() == true)
-            {
-                project.DeletePcbSpecTempData(pcbSpecTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
-                project.BeginTransaction();
-                try {
-                    for (int i = 1; i <= length; i++)
-                    {
-                        if (i != strNum)
+            using (EditPcbSpecItemWindow editWindow = new EditPcbSpecItemWindow(projectPath, strNum, tempNum, pcbSpecTempSave.GetCurrent() + 1)) { 
+                if (editWindow.ShowDialog() == true)
+                {
+                    project.DeletePcbSpecTempData(pcbSpecTempSave.SetNext()); // Увеличиваем номер текущего сохранения и одновременно удаляем все последующие сохранения               
+                    project.BeginTransaction();
+                    try {
+                        for (int i = 1; i <= length; i++)
                         {
-                            tempList[i - 1].id = id.makeID(i, pcbSpecTempSave.GetCurrent());
-                            project.AddPcbSpecItem(tempList[i - 1]);
+                            if (i != strNum)
+                            {
+                                tempList[i - 1].id = id.makeID(i, pcbSpecTempSave.GetCurrent());
+                                project.AddPcbSpecItem(tempList[i - 1]);
+                            }
+
                         }
-
+                    } finally {
+                        project.Commit();
                     }
-                } finally {
-                    project.Commit();
-                }
-                tempList[strNum - 1] = project.GetPcbSpecItem(strNum, pcbSpecTempSave.GetCurrent());
+                    tempList[strNum - 1] = project.GetPcbSpecItem(strNum, pcbSpecTempSave.GetCurrent());
 
-                DisplayPcbSpecValues(tempList);
+                    DisplayPcbSpecValues(tempList);
+                }
             }
         }
 

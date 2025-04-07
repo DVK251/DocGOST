@@ -27,7 +27,7 @@ namespace DocGOST
     /// <summary>
     /// Логика взаимодействия для OsnNadpisWindow.xaml
     /// </summary>
-    public partial class OsnNadpisWindow : Window
+    public partial class OsnNadpisWindow : Window, IDisposable
     {
 
 
@@ -316,6 +316,11 @@ namespace DocGOST
             osnNadpisItem.vedomostValue = "А3";
             osnNadpisItem.pcbSpecificationValue = "А4";
             project.SaveOsnNadpisItem(osnNadpisItem);
+        }
+
+        public void Dispose() {
+            project?.Dispose();
+            project = null;
         }
     }
 }

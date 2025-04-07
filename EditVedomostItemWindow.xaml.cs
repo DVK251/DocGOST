@@ -18,6 +18,7 @@
  * 
  */
 
+using System;
 using System.Windows;
 using DocGOST.Data;
 
@@ -26,7 +27,7 @@ namespace DocGOST
     /// <summary>
     /// Логика взаимодействия для EditVedomostItemWindow.xaml
     /// </summary>
-    public partial class EditVedomostItemWindow : Window
+    public partial class EditVedomostItemWindow : Window, IDisposable
     {
         public EditVedomostItemWindow(string projectPath, int strNum, int currentSave, int nextSave)
         {
@@ -112,6 +113,11 @@ namespace DocGOST
 
                 this.DialogResult = true;
             }
+        }
+
+        public void Dispose() {
+            project?.Dispose();
+            project = null;
         }
     }
 }

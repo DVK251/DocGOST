@@ -544,6 +544,7 @@ namespace DocGOST.Data
 
         public void Dispose() {
             db?.Dispose();
+            db = null;
         }
 
         #endregion

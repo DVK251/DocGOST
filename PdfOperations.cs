@@ -28,7 +28,7 @@ using DocGOST.Data;
 
 namespace DocGOST
 {
-    class PdfOperations
+    class PdfOperations: IDisposable
     {
 
         const int perech_first_page_rows_count = 23;
@@ -2317,10 +2317,10 @@ namespace DocGOST
                 vData.Add(project.GetVedomostItem(i, tempNumber));
             }
 
-            currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
 
             for (int j = startIndex; j < startIndex + rowsCount; j++)
             {
+                currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 for (int i = 0; i < 11; i++)
                 {
                     if (j >= numberOfValidStrings) currentCell.Phrase = new Phrase(String.Empty);
@@ -2352,7 +2352,7 @@ namespace DocGOST
                     //Для графы "Наименование" устанавливаем выравниванеие по левому краю:
                     if (i == 1 && (j < numberOfValidStrings && !vData[j].isNameUnderlined)) currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
                     else currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
-                   
+
                     vedomostTable.AddCell(currentCell);
                 }
             }
@@ -2745,5 +2745,9 @@ namespace DocGOST
     
         }
 
+        public void Dispose() {
+            project?.Dispose();
+            project = null;
+        }
     }
 }

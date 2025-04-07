@@ -31,7 +31,7 @@ namespace DocGOST
 
         public List<VedomostItem> groupVedomostElements(List<VedomostItem> tempList, ref int numberOfValidStrings)
         {
-            const int maxNameLength = 36;
+            const int maxNameLength = 32; // _DVK was 36
 
             #region Группировка всех элементов ведомости с одинаковым наименованием
 
@@ -68,6 +68,7 @@ namespace DocGOST
                     tempItem.groupPlural = tempList[i].groupPlural;
                     tempItem.note = tempList[i].note;
                     tempItem.auxNote = tempList[i].auxNote;
+                    tempItem.supplier = tempList[i].supplier;
                     tempList1.Add(tempItem);
                 }
             }
@@ -179,6 +180,7 @@ namespace DocGOST
                             tempItem.quantityTotal = tempList[i].quantityTotal;
                             tempItem.note = tempList[i].note;
                             tempItem.auxNote = tempList[i].auxNote;
+                            tempItem.supplier = tempList[i].supplier;
                         }
 
                         //Разбираемся с наименованием

@@ -18,6 +18,7 @@
  * 
  */
 
+using System;
 using System.Windows;
 using DocGOST.Data;
 
@@ -26,7 +27,7 @@ namespace DocGOST
     /// <summary>
     /// Логика взаимодействия для EditPerechenItemWindow.xaml
     /// </summary>
-    public partial class EditPerechenItemWindow : Window
+    public partial class EditPerechenItemWindow : Window, IDisposable
     {
         public EditPerechenItemWindow(string projectPath, int strNum, int currentSave, int nextSave)
         {
@@ -71,6 +72,9 @@ namespace DocGOST
             }
         }
 
-
+        public void Dispose() {
+            project?.Dispose();
+            project = null;
+        }
     }
 }
