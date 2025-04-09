@@ -29,7 +29,7 @@ namespace DocGOST
     {
         const int maxNoteLength = 12;
 
-        public List<VedomostItem> groupVedomostElements(List<VedomostItem> tempList, ref int numberOfValidStrings)
+        public List<VedomostItem> groupVedomostElements(List<VedomostItem> tempList, ref int numberOfValidStrings, bool bAllowSingleLineGroups = true)
         {
             const int maxNameLength = 32; // _DVK was 36
 
@@ -124,7 +124,7 @@ namespace DocGOST
                     tempItem = new VedomostItem();
                     tempItem.makeEmpty();
                     //Добавляем название группы
-                    if (groupList.Count > 1)
+                    if (groupList.Count > 1 || !bAllowSingleLineGroups)
                     {
                         tempItem.name = groupList[0].groupPlural;
                         tempItem.isNameUnderlined = true;
@@ -157,7 +157,7 @@ namespace DocGOST
                     tempList1.Add(tempItem);//добавляем пустую строчку
                     tempItem = new VedomostItem();
                     tempItem.makeEmpty();
-                    if (groupList.Count > 1)
+                    if (groupList.Count > 1 || !bAllowSingleLineGroups)
                     {
                         tempItem.name = groupList[0].groupPlural;
                         tempItem.isNameUnderlined = true;
