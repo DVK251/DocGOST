@@ -33,6 +33,31 @@ namespace DocGOST
         {
             const int maxNameLength = 32; // _DVK was 36
 
+            //List<string> DivideLongLine(string str) {
+            //    var cs2f = new char[] { ' ', '-' };
+            //    int lineStart = 0;
+            //    int pos = 0;
+            //    var rslt = new List<string>();
+
+            //    while (true) {
+            //        int idx = str.IndexOfAny(cs2f, pos);
+            //        if (idx >= 0) {
+            //            bool isSpace = (str[idx] == ' ');
+            //            if (!isSpace) idx++;
+            //            if (idx - lineStart <= maxNameLength 
+            //                || PdfOperations.MeasureTextWidth(str.Substring(lineStart, idx - lineStart), PdfOperations.VEDOMOST_NORMAL_FONT_SZ) < 10) {
+            //                pos = isSpace ? idx + 1 : idx;
+            //            }
+
+            //                pos = idx + 1;
+            //            }
+            //            lineStart = idx;
+            //                || )
+            //    }
+            //    return rslt;
+            //}
+
+
             #region Группировка всех элементов ведомости с одинаковым наименованием
 
             VedomostItem tempItem = new VedomostItem();
@@ -186,7 +211,8 @@ namespace DocGOST
                         //Разбираемся с наименованием
                         if (name.Length > maxNameLength)
                         {
-                            string[] words = name.Split(new Char[] { ' ' });
+
+                            string[] words = name.Split(new Char[] { ' ', '-' });
                             tempItem.name = words[0] + ' ';
 
                             for (int j = 1; j < words.Length; j++)
