@@ -128,6 +128,23 @@ namespace DocGOST.Utils
         }
     }
 
+    public static class DoubleComma
+    {
+        static NumberFormatInfo nfi = new NumberFormatInfo() { NumberDecimalSeparator = "," };
+
+        public static bool TryParse(string s, out double result) {
+            return Double.TryParse(s, NumberStyles.Float, nfi, out result);
+        }
+
+        public static double Parse(string s) {
+            return Double.Parse(s, NumberStyles.Float, nfi);
+        }
+
+        public static string ToStringComma(this Double v) {
+            return v.ToString(nfi);
+        }
+    }
+
     public static class DictionaryExtensions
     {
         public static TValue GetValueDef<TKey, TValue>(this Dictionary<TKey, TValue> map, TKey key, TValue defValue) {
