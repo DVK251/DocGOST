@@ -2297,6 +2297,7 @@ namespace DocGOST
             const string nameName = "Part Number";
             const string documName = "Docum";
             const string manufName = "Note";
+            //const string valueName = "Value";
             const string auxName = "Aux";
             const string sectionName = "Section";
             const string shifrName = "Shifr";
@@ -2341,7 +2342,7 @@ namespace DocGOST
                             if (bCompsNOthers) {
                                 if (SA[LINE_PIDX_VALUE] == "__FILE__") {
                                     string fn2 = SA[LINE_PIDX_PART_NUMBER];
-                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), Path.GetFileName(fn2)), SA[LINE_PIDX_QTY].ToInt32(1, 999), true);
+                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), Path.GetFileName(fn2)), SA[LINE_PIDX_QTY].ToInt32(1, 999), bCompsNOthers: true);
                                     rslt_list.AddRange(r.comps);
                                     oth_list.AddRange(r.others);
                                     continue;
@@ -2360,7 +2361,8 @@ namespace DocGOST
                                     new ComponentProperties(designatorName, SA[LINE_PIDX_REFDES]),
                                     new ComponentProperties(documName, documPost),
                                     new ComponentProperties(manufName, manufacturer),
-                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX])
+                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX]),
+                                    //new ComponentProperties(valueName, SA[LINE_PIDX_VALUE])
                                 };
                                 for (int i = 0; i < nTimes; i++) 
                                     rslt_list.Add(componentPropList);
@@ -2391,7 +2393,7 @@ namespace DocGOST
                 if (bCompsNOthers) { 
                     var fn_oth = Path.ChangeExtension(fn, null) + "_add.txt"; // список дополнительных деталей и материалов
                     if (File.Exists(fn_oth)) {
-                        var r = LoadOneFile(fn_oth, nTimes, false);
+                        var r = LoadOneFile(fn_oth, nTimes, bCompsNOthers: false);
                         oth_list.AddRange(r.others);
                     }
                     var repline = $"{nTimes} x {Path.GetFileName(fn)} = {nTimes} x {rslt_list.Count / nTimes} = {rslt_list.Count} components";
@@ -2459,7 +2461,7 @@ namespace DocGOST
                 }
             }
 
-            var lrslt = LoadOneFile(pcbPrjFile, 1, true);
+            var lrslt = LoadOneFile(pcbPrjFile, 1, bCompsNOthers: true);
             HeaderInfo = lrslt.hdr;
             componentsList = lrslt.comps;
             othersList = lrslt.others;
@@ -2752,6 +2754,11 @@ namespace DocGOST
                             case documName: tempPerechen.docum = prop.Text; break;
                             case manufName: tempPerechen.note = prop.Text; break;
                             case auxName: tempPerechen.auxNote = prop.Text; break;
+                            //case valueName: {
+                            //    if (prop.Text != "")
+                            //    tempSpecification.value
+                            //    break;
+                            //}
                         }
                     } catch {
                         report.Add(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + componentsList.Count);

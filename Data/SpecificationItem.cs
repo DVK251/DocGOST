@@ -37,6 +37,8 @@ namespace DocGOST.Data
         public string group { get; set; } // Обозначение группы, т.е. "C", "DD", "R" и т.д. (нужно для сортировки)
         public string docum { get; set; } // Документ на поставку
         public string designator { get; set; } // Поз. обозначение
+        //[Ignore]
+        //public double value { get; set; } // Поз. обозначение
         //Оформление текста
         public bool isNameUnderlined { get; set; } //Подчёркивание наименования
 
