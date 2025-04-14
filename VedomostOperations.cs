@@ -65,7 +65,7 @@ namespace DocGOST
             for (int i = 0; i < numberOfValidStrings; i++)
             {
                 for (int j = i + 1; j < numberOfValidStrings; j++)
-                    if ((tempList[j].name == tempList[i].name) & (tempList[j].docum == tempList[i].docum) & (tempList[j].name != String.Empty))
+                    if ((tempList[j].name == tempList[i].name) && (tempList[j].docum == tempList[i].docum) && (tempList[j].name != String.Empty))
                     {
                         tempList[i].quantityIzdelie = (int.Parse(tempList[i].quantityIzdelie) + int.Parse(tempList[j].quantityIzdelie)).ToString();
                         tempList[i].quantityTotal = tempList[i].quantityIzdelie;

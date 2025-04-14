@@ -56,6 +56,7 @@ namespace DocGOST
         Global id; //Переменная для работы с id данных проекта (т.е. для того, чтобы создавать и расшифровывать id,
                    //т.к. id сгруппирован из номера текущего сохранённого состояния и номера строки записи - подробнее в Data.PerechenItem.cs и Data.SpecificationItem.cs)
         bool isPcbMultilayer = false;
+        bool bSilentMode = false; // режим запуска из командной строки без выдачи запроса при закрытии программы и без автоматического открытия сформированных pdf-файлов
 
         class HiePerechenBlock
         {
@@ -98,7 +99,33 @@ namespace DocGOST
             closeBinding.Executed += ExitMenuItem_Click;
             this.CommandBindings.Add(closeBinding);
 
-            //ImportPrjfromMentor("d:\\WaveGen.txt");
+            { 
+                string importfn = "";
+                string exportmode = "";
+                bool bExit = false;
+                var SA = System.Environment.GetCommandLineArgs();
+                for (int i = 1; i < SA.Length; i++) { // skip 1st param
+                    string s = SA[i];
+                    if (s.StartsWith("/IMPORT=", StringComparison.CurrentCultureIgnoreCase))
+                        importfn = s.Substring(8);
+                    else if (s.StartsWith("/EXPORT=", StringComparison.CurrentCultureIgnoreCase))
+                        exportmode = s.Substring(8);
+                    else if (s.Equals("/EXIT", StringComparison.CurrentCultureIgnoreCase))
+                        bExit = true;
+                }
+                if (importfn != "") {
+                    bSilentMode = true;
+                    ImportPrjfromMentor(importfn); 
+                    exportmode = exportmode.ToUpper();
+                    if (exportmode != "") {
+                        if (exportmode.Contains("P")) chkExportPerechen.IsChecked = true;
+                        if (exportmode.Contains("S")) chkExportSpec.IsChecked = true;
+                        if (exportmode.Contains("V")) chkExportVedomost.IsChecked = true;
+                        CreatePdf_Click(null, null);
+                    }
+                    if (bExit) Close();
+                }
+            }
         }
 
         string projectPath;
@@ -222,7 +249,7 @@ namespace DocGOST
                 if (openDlg.ShowDialog() != true) return;
 
                 MessageBoxResult closingDialogResult = MessageBoxResult.No;
-                if ((perTempSave != null) & (specTempSave != null) & (pcbSpecTempSave != null) & (vedomostTempSave != null))
+                if ((perTempSave != null) && (specTempSave != null) && (pcbSpecTempSave != null) && (vedomostTempSave != null))
                 {
                     if ((perTempSave.GetCurrent() != perTempSave.GetLastSavedState()) |
                     (specTempSave.GetCurrent() != specTempSave.GetLastSavedState()) |
@@ -660,7 +687,7 @@ namespace DocGOST
                 }
                 if (prjStr.Length > 12)
                 {
-                    if ((isWaitingVariantDescription == true) & (prjStr.Substring(0, 12).ToUpper() == "DESCRIPTION="))
+                    if ((isWaitingVariantDescription == true) && (prjStr.Substring(0, 12).ToUpper() == "DESCRIPTION="))
                     {
                         isWaitingVariantDescription = false;
                         variantNameList.Add(prjStr.Substring(12, prjStr.Length - 12));
@@ -729,7 +756,7 @@ namespace DocGOST
                 }
                 #endregion
 
-                if ((prevPrevPrjStr.Length > 10) & (prevPrjStr.Length > 4) && (prjStr.Length > 5))
+                if ((prevPrevPrjStr.Length > 10) && (prevPrjStr.Length > 4) && (prjStr.Length > 5))
                 {
                     if (prevPrevPrjStr.Substring(0, 10).ToUpper() == "[PARAMETER")
                         if (prevPrjStr.Substring(0, 4).ToUpper() == "NAME")
@@ -754,7 +781,7 @@ namespace DocGOST
                 }
 
                 if (prjStr.Length > 13)
-                    if ((prjStr.Substring(0, 13).ToUpper() == "DOCUMENTPATH=") & (prjStr.Substring(prjStr.Length - 6, 6).ToUpper() == "SCHDOC"))
+                    if ((prjStr.Substring(0, 13).ToUpper() == "DOCUMENTPATH=") && (prjStr.Substring(prjStr.Length - 6, 6).ToUpper() == "SCHDOC"))
                     {
                         schPath = System.IO.Path.Combine(pcbPrjFolderPath, prjStr.Substring(13));
 
@@ -782,8 +809,8 @@ namespace DocGOST
                                         if (schStrArray[i].Substring(0, 14).ToUpper() == "CURRENTPARTID=")
                                             if ((schStrArray[i].Substring(0, 15).ToUpper() != "CURRENTPARTID=1") | (schStrArray[i].Length > 15)) isFirstPartOfComponent = false;
 
-                                    if ((schStrArray[i].Length > 5) & (schStrArray[i + 1].Length > 5))
-                                        if ((schStrArray[i].Substring(0, 5).ToUpper() == "TEXT=") & (schStrArray[i + 1].Substring(0, 5).ToUpper() == "NAME="))
+                                    if ((schStrArray[i].Length > 5) && (schStrArray[i + 1].Length > 5))
+                                        if ((schStrArray[i].Substring(0, 5).ToUpper() == "TEXT=") && (schStrArray[i + 1].Substring(0, 5).ToUpper() == "NAME="))
                                         {
                                             ComponentProperties prop = new ComponentProperties();
                                             prop.Name = schStrArray[i + 1].Substring(5);
@@ -798,9 +825,9 @@ namespace DocGOST
                                         }
 
                                     if (schStrArray[i].Length >= 8)
-                                        if ((schStrArray[i].Substring(0, 7).ToUpper() == "HEADER=") | ((schStrArray[i].ToUpper() == "RECORD=1") & (schStrArray[i].Length == 8))) //Считаем, что описание каждого компонента заканчивается этой фразой
+                                        if ((schStrArray[i].Substring(0, 7).ToUpper() == "HEADER=") || ((schStrArray[i].ToUpper() == "RECORD=1") && (schStrArray[i].Length == 8))) //Считаем, что описание каждого компонента заканчивается этой фразой
                                         {
-                                            if ((isNoBom == false) & (componentPropList.Count > 0) & (isFirstPartOfComponent == true))
+                                            if ((isNoBom == false) && (componentPropList.Count > 0) && (isFirstPartOfComponent == true))
                                             {
                                                 componentsList.Add(componentPropList);
 
@@ -817,8 +844,8 @@ namespace DocGOST
                                 else if (isComponent == false)
                                 {
                                     //Запись полей основной надписи в базу данных проекта, если они встречаются в файле Sch:
-                                    if ((schStrArray[i].Length > 5) & (schStrArray[i + 1].Length > 5))
-                                        if ((schStrArray[i].Substring(0, 5).ToUpper() == "TEXT=") & (schStrArray[i + 1].Substring(0, 5).ToUpper() == "NAME="))
+                                    if ((schStrArray[i].Length > 5) && (schStrArray[i + 1].Length > 5))
+                                        if ((schStrArray[i].Substring(0, 5).ToUpper() == "TEXT=") && (schStrArray[i + 1].Substring(0, 5).ToUpper() == "NAME="))
                                         {
                                             ComponentProperties prop = new ComponentProperties();
                                             prop.Name = schStrArray[i + 1].Substring(5);
@@ -842,7 +869,7 @@ namespace DocGOST
 
                         schFile.Close();
                     }
-                    else if ((prjStr.Substring(0, 13) == "DocumentPath=") & (prjStr.Substring(prjStr.Length - 6, 6) == "PcbDoc") & (pcbLayersCount == 0)) //pcbLayersCount == 0 - если в проекте 2 и более плат, считываем только данные первой
+                    else if ((prjStr.Substring(0, 13) == "DocumentPath=") && (prjStr.Substring(prjStr.Length - 6, 6) == "PcbDoc") && (pcbLayersCount == 0)) //pcbLayersCount == 0 - если в проекте 2 и более плат, считываем только данные первой
                     {
                         //Добавляем плату в спецификацию                             
                         //plataSpecItem.oboznachenie = prjStr.Substring(13, prjStr.Length - 20);
@@ -871,16 +898,16 @@ namespace DocGOST
                                 int curStrLength = pcbStrArray[i].Length;
                                 //Определяем количество слоёв платы, и определяем, к какому разделу спецификации будет отноститься плата
                                 if (curStrLength == 28)
-                                    if ((pcbStrArray[i].Substring(0, 8).ToUpper() == "LAYERSET") & (pcbStrArray[i].Substring(9, 19).ToUpper() == "NAME=&SIGNAL LAYERS"))
+                                    if ((pcbStrArray[i].Substring(0, 8).ToUpper() == "LAYERSET") && (pcbStrArray[i].Substring(9, 19).ToUpper() == "NAME=&SIGNAL LAYERS"))
                                     {
                                         isLayersCounting = true;
                                     }
                                 if (curStrLength == 27)
-                                    if ((pcbStrArray[i].Substring(0, 8).ToUpper() == "LAYERSET") & (pcbStrArray[i].Substring(9, 18).ToUpper() == "NAME=&PLANE LAYERS"))
+                                    if ((pcbStrArray[i].Substring(0, 8).ToUpper() == "LAYERSET") && (pcbStrArray[i].Substring(9, 18).ToUpper() == "NAME=&PLANE LAYERS"))
                                     {
                                         isLayersCounting = true;
                                     }
-                                if ((isLayersCounting == true) & (i < pcbStrArray.Length - 2))
+                                if ((isLayersCounting == true) && (i < pcbStrArray.Length - 2))
                                 {
                                     if (pcbStrArray[i + 1].Split(new Char[] { '=' }).Length > 1)
                                         if (pcbStrArray[i + 1].Split(new Char[] { '=' })[1].Length > 0)
@@ -893,13 +920,13 @@ namespace DocGOST
                                 //Определяем наименования и толщины диэлектриков
 
                                 if (curStrLength >= 26)
-                                    if ((pcbStrArray[i].Substring(0, 14).ToUpper() == "V9_STACK_LAYER") & (pcbStrArray[i].Substring(curStrLength - 10).ToUpper() == "DIELTYPE=2"))
+                                    if ((pcbStrArray[i].Substring(0, 14).ToUpper() == "V9_STACK_LAYER") && (pcbStrArray[i].Substring(curStrLength - 10).ToUpper() == "DIELTYPE=2"))
                                     {
                                         dielLayerNumber = pcbStrArray[i].Substring(("V9_STACK_LAYER").Length);
                                         dielLayerNumber = dielLayerNumber.Substring(0, dielLayerNumber.Length - "_DIELTYPE=2".Length);
                                         pcbMaterialsItem.DielType = 2;
                                     }
-                                    else if ((pcbStrArray[i].Substring(0, 14).ToUpper() == "V9_STACK_LAYER") & (pcbStrArray[i].Substring(curStrLength - 10).ToUpper() == "DIELTYPE=1"))
+                                    else if ((pcbStrArray[i].Substring(0, 14).ToUpper() == "V9_STACK_LAYER") && (pcbStrArray[i].Substring(curStrLength - 10).ToUpper() == "DIELTYPE=1"))
                                     {
                                         dielLayerNumber = pcbStrArray[i].Substring(("V9_STACK_LAYER").Length);
                                         dielLayerNumber = dielLayerNumber.Substring(0, dielLayerNumber.Length - "_DIELTYPE=1".Length);
@@ -946,7 +973,7 @@ namespace DocGOST
                                 {
                                     bool listContainsItem = false;
                                     for (int i = 0; i < pcbMaterialsList.Count; i++)
-                                        if ((pcbMaterialsList[i].Name == pcbMaterialTempItem.Name) & (pcbMaterialsList[i].Height == pcbMaterialTempItem.Height) & (pcbMaterialsList[i].DielType == pcbMaterialTempItem.DielType))
+                                        if ((pcbMaterialsList[i].Name == pcbMaterialTempItem.Name) && (pcbMaterialsList[i].Height == pcbMaterialTempItem.Height) && (pcbMaterialsList[i].DielType == pcbMaterialTempItem.DielType))
                                         {
                                             pcbMaterialsList[i].Quantity++;
                                             listContainsItem = true;
@@ -1637,7 +1664,7 @@ namespace DocGOST
                                 prop.Name = schStr.Split(new string[] { "\" \"" }, StringSplitOptions.None)[0];
                                 prop.Text = schStr.Split(new string[] { "\" \"" }, StringSplitOptions.None)[1].Trim(new char[] { '"' });
                                 if (prop.Text.Length >= 1)
-                                    if ((prop.Name == "Reference") & (prop.Text.Substring(0, 1) == "#")) isNoBom = true; // для символов Земли и питания     
+                                    if ((prop.Name == "Reference") && (prop.Text.Substring(0, 1) == "#")) isNoBom = true; // для символов Земли и питания     
                                 if (isNoBom == false)
                                 {
                                     componentPropList.Add(prop);
@@ -1647,7 +1674,7 @@ namespace DocGOST
 
                         if ((schStr.Trim() == "(symbol") | (schStr.Trim() == "(sheet_instances") | (schStr== "(kicad_sch")) //Считаем, что описание каждого компонента заканчивается этой фразой
                         {
-                            if ((isNoBom == false) & (componentPropList.Count > 0) & (isFirstPartOfComponent == true))
+                            if ((isNoBom == false) && (componentPropList.Count > 0) && (isFirstPartOfComponent == true))
                             {
                                 componentsList.Add(componentPropList);
 
@@ -1731,7 +1758,7 @@ namespace DocGOST
                     {
                         bool listContainsItem = false;
                         for (int i = 0; i < pcbMaterialsList.Count; i++)
-                            if ((pcbMaterialsList[i].Name == pcbMaterialTempItem.Name) & (pcbMaterialsList[i].Height == pcbMaterialTempItem.Height) & (pcbMaterialsList[i].DielType == pcbMaterialTempItem.DielType))
+                            if ((pcbMaterialsList[i].Name == pcbMaterialTempItem.Name) && (pcbMaterialsList[i].Height == pcbMaterialTempItem.Height) && (pcbMaterialsList[i].DielType == pcbMaterialTempItem.DielType))
                             {
                                 pcbMaterialsList[i].Quantity++;
                                 listContainsItem = true;
@@ -3046,7 +3073,7 @@ namespace DocGOST
                 string[] otherPropNames = origStr.Split(new char[] { '+' });
                 for (int j = 0; j < otherPropNames.Length; j++)
                 {
-                    if ((otherPropNames[j].First() == '\'') & (otherPropNames[j].Last() == '\''))
+                    if ((otherPropNames[j].First() == '\'') && (otherPropNames[j].Last() == '\''))
                         tempStr += otherPropNames[j].Substring(1, otherPropNames[j].Length - 2);
                     else
                     {
@@ -3276,21 +3303,21 @@ namespace DocGOST
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
                     using (var pdf = new PdfOperations(projectPath))
                         pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
-                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                    if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                 }
 
                 if (chkExportSpec.IsChecked == true) {
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
                     using (var pdf = new PdfOperations(projectPath))
                         pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
-                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                    if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
                     if (isPcbMultilayer == true) // если плата - сборочная единица
                     {
                         pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
                         using (var pdf = new PdfOperations(projectPath))
                             pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
-                        System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                        if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     }
                 }
 
@@ -3298,7 +3325,7 @@ namespace DocGOST
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
                     using (var pdf = new PdfOperations(projectPath)) 
                         pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
-                    System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
+                    if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     CreateVedomostCsv(Path.ChangeExtension(projectPath, null) + " " + "ВП.csv", vedomostTempSave.GetCurrent());
                 }
             } catch (Exception ex) {
@@ -3329,7 +3356,7 @@ namespace DocGOST
         /// <summary> При закрытии окна программы выполняется проверка, сохранён ли проект, и показывается соответствующее диалоговое окно </summary>        
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if ((perTempSave != null) & (specTempSave != null) & (vedomostTempSave != null) & (pcbSpecTempSave != null))
+            if ((perTempSave != null) && (specTempSave != null) && (vedomostTempSave != null) && (pcbSpecTempSave != null) && !bSilentMode)
             {
                 if ((perTempSave.GetCurrent() != perTempSave.GetLastSavedState()) |
                     (specTempSave.GetCurrent() != specTempSave.GetLastSavedState()) |

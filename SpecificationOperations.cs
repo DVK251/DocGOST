@@ -62,7 +62,7 @@ namespace DocGOST
             {
                 long designatorValue = GetDesignatorValue(sList[i].designator);
 
-                if ((sList[i].name == prevElemName)&(designatorValue == prevDesignatorValue+1))
+                if ((sList[i].name == prevElemName) && (designatorValue == prevDesignatorValue + 1))
                 {
                     tempItem.note += "," + sList[i].note;
                     tempItem.quantity = (int.Parse(tempItem.quantity) + 1).ToString();
@@ -104,7 +104,7 @@ namespace DocGOST
             for (int i = 0; i < numberOfValidStrings; i++)
             {
                 for (int j = i + 1; j < numberOfValidStrings; j++)
-                    if ((tempList[j].name == tempList[i].name) & (tempList[j].name != String.Empty))
+                    if ((tempList[j].name == tempList[i].name) && (tempList[j].name != String.Empty))
                     {
                         tempList[i].note += "," + tempList[j].note;
                         tempList[i].quantity = (int.Parse(tempList[i].quantity) + int.Parse(tempList[j].quantity)).ToString();

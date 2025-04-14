@@ -58,7 +58,7 @@ namespace DocGOST
             for (int i = 1; i < numberOfValidStrings; i++)
             {
                 long designatorValue = GetDesignatorValue(pData[i].designator);
-                if (((pData[i].name == prevElemName) & (pData[i].note == prevElemNote))&(designatorValue == prevDesignatorValue+1)) numOfSameElems++;
+                if (((pData[i].name == prevElemName) && (pData[i].note == prevElemNote))&&(designatorValue == prevDesignatorValue+1)) numOfSameElems++;
                 else
                 {
                     prevElemName = pData[i].name;
@@ -84,7 +84,7 @@ namespace DocGOST
                     }
 
                 }
-                if ((i == numberOfValidStrings - 1) & (numOfSameElems > 1))
+                if ((i == numberOfValidStrings - 1) && (numOfSameElems > 1))
                 {
 
                     //Группировка позиционных обозначений:
@@ -119,7 +119,7 @@ namespace DocGOST
                 if ((pData[i + stringsAdded].groupPlural == prevElemGroup)) numOfSameGroupElems++;
                 else
                 {
-                    if ((numOfSameGroupElems >= 3) & (prevElemGroup != String.Empty))
+                    if ((numOfSameGroupElems >= 3) && (prevElemGroup != String.Empty))
                     {
                         //Сдвиг находящихся ниже строк на 2 для пустой строки и строки под наименование группы:
                         int sdvigNumber = 2;
@@ -188,7 +188,7 @@ namespace DocGOST
                 if (i == (numberOfValidStringsTemp - 1))
                 {
 
-                    if ((numOfSameGroupElems >= 2) & (prevElemGroup != String.Empty))
+                    if ((numOfSameGroupElems >= 2) && (prevElemGroup != String.Empty))
                     {
                         //Сдвиг находящихся ниже строк на 2 для пустой строки и строки под наименование группы:
                         int sdvigNumber = 2;
