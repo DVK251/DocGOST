@@ -30,6 +30,10 @@ using DocGOST.Data;
 using DocGOST.Utils;
 using System.Diagnostics;
 using static DocGOST.Global;
+using System.Data.Entity.Core.Metadata.Edm;
+
+// TODO Материалы не переносятся на другую строку при переполнении строки
+// TODO Точка останова при исключении не срабатывает
 
 namespace DocGOST
 {
@@ -2329,6 +2333,7 @@ namespace DocGOST
             const string sectionName = "Section";
             const string shifrName = "Shifr";
             const string qtyName = "Qty";
+            const string formatName = "Format";
 
             var subst_map = new Dictionary<string, (string pn, string tu, string manuf)>();
             var report = new List<string>();
@@ -2336,7 +2341,9 @@ namespace DocGOST
             var Spec_StrToSection = new Dictionary<string, (SpSections sec, string secName)>() {
                 { "DET", (SpSections.Details, "Детали") },
                 { "MAT", (SpSections.Materials, "Материалы") }, 
-                { "STD", (SpSections.Standard, "Стандартные изделия") }
+                { "STD", (SpSections.Standard, "Стандартные изделия") },
+                { "DOC", (SpSections.Documentation, "Документация") },
+                { "OTH", (SpSections.Other, "Прочие изделия") }
             };
 
             string[] LoadFileHeader(CsvReader dataFile) {
@@ -2395,10 +2402,12 @@ namespace DocGOST
                                     rslt_list.Add(componentPropList);
                             }
                             else {
-                                Spec_StrToSection.GetValueRE(SA[LINE_PIDX_PART_NUMBER]);
-                                var dqty = DoubleComma.Parse( SA[LINE_PIDX_QTY] );
-                                if (dqty <= 0.0) 
-                                    throw new Exception("Wrong Quantity");
+                                var section = Spec_StrToSection.GetValueRE(SA[LINE_PIDX_PART_NUMBER]);
+                                if (section.sec != SpSections.Documentation) { 
+                                    var dqty = DoubleComma.Parse( SA[LINE_PIDX_QTY] );
+                                    if (dqty <= 0.0) 
+                                        throw new Exception("Wrong Quantity");
+                                }
 
                                 var componentPropList = new List<ComponentProperties>() {
                                     new ComponentProperties(sectionName, SA[LINE_PIDX_PART_NUMBER]),
@@ -2407,7 +2416,8 @@ namespace DocGOST
                                     new ComponentProperties(manufName, SA[LINE_PIDX_MANUFACTURER]),
                                     new ComponentProperties(nameName, SA[LINE_PIDX_PN]),
                                     new ComponentProperties(documName, SA[LINE_PIDX_TU]),
-                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX])
+                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX]),
+                                    new ComponentProperties(formatName, SA[LINE_PIDX_REFDES])
                                 };
                                 for (int i = 0; i < nTimes; i++)
                                     oth_list.Add(componentPropList);
@@ -2525,46 +2535,6 @@ namespace DocGOST
             List<PcbSpecificationItem> pcbSpecList = new List<PcbSpecificationItem>();
 
             int numberOfValidStrings = 0;
-
-            SpecificationItem tempSpecItem = new SpecificationItem();
-            numberOfValidStrings++;
-            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
-            tempSpecItem.format = "А3";
-            tempSpecItem.oboznachenie = PrjShifr + " СБ";
-            tempSpecItem.name = "Сборочный чертёж";
-            tempSpecItem.quantity = String.Empty;
-            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
-            specList.Add(tempSpecItem);
-
-            tempSpecItem = new SpecificationItem();
-            numberOfValidStrings++;
-            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
-            tempSpecItem.format = "А3";
-            tempSpecItem.oboznachenie = PrjShifr + " Э3";
-            tempSpecItem.name = "Схема электрическая принципиальная";
-            tempSpecItem.quantity = String.Empty;
-            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
-            specList.Add(tempSpecItem);
-
-            tempSpecItem = new SpecificationItem();
-            numberOfValidStrings++;
-            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
-            tempSpecItem.format = "А4";
-            tempSpecItem.oboznachenie = PrjShifr + " ПЭ3";
-            tempSpecItem.name = "Перечень элементов";
-            tempSpecItem.quantity = String.Empty;
-            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
-            specList.Add(tempSpecItem);
-
-            tempSpecItem = new SpecificationItem();
-            numberOfValidStrings++;
-            tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
-            tempSpecItem.format = "А3";
-            tempSpecItem.oboznachenie = PrjShifr + " ВП";
-            tempSpecItem.name = "Ведомость покупных изделий";
-            tempSpecItem.quantity = String.Empty;
-            tempSpecItem.spSection = (int)Global.SpSections.Documentation;
-            specList.Add(tempSpecItem);
 
             /*tempSpecItem = new SpecificationItem();
             numberOfValidStrings++;
@@ -2853,6 +2823,7 @@ namespace DocGOST
             } // for
 
             var materials_map = new Dictionary<(string name, string tu, string edizm), (SpecificationItem si, VedomostItem vi)>();
+            bool bHaveDocAdditionals = false;
             for (int i = 0; i < othersList.Count; i++) {
                 SpecificationItem tempSpecification = new SpecificationItem();
                 VedomostItem tempVedomost = new VedomostItem();
@@ -2860,7 +2831,6 @@ namespace DocGOST
                 numberOfValidStrings++;
 
                 tempSpecification.id = id.makeID(numberOfValidStrings, perTempSave.GetCurrent());
-                tempSpecification.format = String.Empty;
                 tempSpecification.zona = String.Empty;
                 tempSpecification.position = "Авто";
                 tempSpecification.group = String.Empty;
@@ -2873,13 +2843,16 @@ namespace DocGOST
                         var prop = litem[j];
                         switch (prop.Name) {
                             case sectionName: tempSpecification.spSection = (int)Spec_StrToSection[prop.Text].sec; 
-                                tempVedomost.group = tempVedomost.groupPlural = Spec_StrToSection[prop.Text].secName; break;
+                                tempVedomost.group = tempVedomost.groupPlural = Spec_StrToSection[prop.Text].secName; 
+                                if (tempSpecification.spSection == (int)SpSections.Documentation) bHaveDocAdditionals = true; 
+                                break;
                             case shifrName: tempSpecification.oboznachenie = prop.Text; break;
                             case qtyName: tempSpecification.quantity = prop.Text; break;
                             case manufName: tempVedomost.supplier = prop.Text; break;
                             case nameName: tempSpecification.name = prop.Text; break;
                             case documName: tempSpecification.docum = prop.Text; break;
                             case auxName: tempSpecification.note = prop.Text; break;
+                            case formatName: tempSpecification.format = prop.Text; break;
                         }
                     } catch {
                         report.Add(j.ToString() + "/" + ((othersList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + othersList.Count);
@@ -2917,8 +2890,53 @@ namespace DocGOST
                     materials_map.Add( (tempVedomost.name, tempVedomost.docum, tempVedomost.note), (tempSpecification, tempVedomost) );
 
                 specList.Add(tempSpecification);
-                vedomostList.Add(tempVedomost);
+                if (tempSpecification.spSection != (int)SpSections.Documentation)
+                    vedomostList.Add(tempVedomost);
+                else
+                    tempSpecification.position = "";
             } // for
+
+            if (!bHaveDocAdditionals) { // если есть хотя бы один документ в дополнительных, то стандартные документы не добавляем
+                SpecificationItem tempSpecItem = new SpecificationItem();
+                numberOfValidStrings++;
+                tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+                tempSpecItem.format = "А3";
+                tempSpecItem.oboznachenie = PrjShifr + " СБ";
+                tempSpecItem.name = "Сборочный чертёж";
+                tempSpecItem.quantity = String.Empty;
+                tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+                specList.Add(tempSpecItem);
+
+                tempSpecItem = new SpecificationItem();
+                numberOfValidStrings++;
+                tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+                tempSpecItem.format = "А3";
+                tempSpecItem.oboznachenie = PrjShifr + " Э3";
+                tempSpecItem.name = "Схема электрическая принципиальная";
+                tempSpecItem.quantity = String.Empty;
+                tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+                specList.Add(tempSpecItem);
+
+                tempSpecItem = new SpecificationItem();
+                numberOfValidStrings++;
+                tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+                tempSpecItem.format = "А4";
+                tempSpecItem.oboznachenie = PrjShifr + " ПЭ3";
+                tempSpecItem.name = "Перечень элементов";
+                tempSpecItem.quantity = String.Empty;
+                tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+                specList.Add(tempSpecItem);
+
+                tempSpecItem = new SpecificationItem();
+                numberOfValidStrings++;
+                tempSpecItem.id = id.makeID(numberOfValidStrings, specTempSave.GetCurrent());
+                tempSpecItem.format = "А3";
+                tempSpecItem.oboznachenie = PrjShifr + " ВП";
+                tempSpecItem.name = "Ведомость покупных изделий";
+                tempSpecItem.quantity = String.Empty;
+                tempSpecItem.spSection = (int)Global.SpSections.Documentation;
+                specList.Add(tempSpecItem);
+            }
 
             var hiePerechenBlockList = new List<HiePerechenBlock>();
             {
@@ -3003,8 +3021,9 @@ namespace DocGOST
             specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
             vedomostListSorted = vedomostList.OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
 
-            for (int i = 0; i < specOtherListSorted.Count; i++) {
+            for (int i = 0; i < perechenListSorted.Count; i++) 
                 perechenListSorted[i].id = id.makeID(i + 1, perTempSave.GetCurrent());
+            for (int i = 0; i < specOtherListSorted.Count; i++) {
                 specOtherListSorted[i].id = id.makeID(i + 1 + (numberOfValidStrings - specOtherListSorted.Count), specTempSave.GetCurrent());
                 vedomostListSorted[i].id = id.makeID(i + 1, vedomostTempSave.GetCurrent());
             }
