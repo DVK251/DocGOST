@@ -5,6 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="ДокГОСТ" Height="1024" Width="1280" Closing="Window_Closing" Icon="Images/GOST icon.png" MinWidth="800" MinHeight="480" SizeChanged="Window_SizeChanged" WindowState="Maximized">
+    <Window.Resources>
+        <RoutedUICommand x:Key="Command_ImportMentorCsv" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource Command_ImportMentorCsv}" Executed="CommandBinding_ImportMentorCsv" />
+    </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Ctrl" Command="ApplicationCommands.Undo"/>
         <KeyBinding Key="Y" Modifiers="Ctrl" Command="ApplicationCommands.Redo"/>
@@ -12,6 +18,7 @@
         <KeyBinding Key="O" Modifiers="Ctrl" Command="ApplicationCommands.Open"/>
         <KeyBinding Key="N" Modifiers="Ctrl" Command="ApplicationCommands.New"/>
         <KeyBinding Key="F4" Modifiers="Alt" Command="ApplicationCommands.Close"/>
+        <KeyBinding Key="I" Modifiers="Ctrl+Shift" Command="{StaticResource Command_ImportMentorCsv}"/>
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
@@ -37,7 +44,7 @@
                     <MenuItem x:Name="importPrjPcbfromADMenuItem" Header="Altium Designer" Click="ImportPrjPcbfromAD_Click" IsEnabled="false"></MenuItem>
                     <MenuItem x:Name="importPrjfromKiCadMenuItem" Header="KiCad" Click="ImportPrjfromKiCad_Click" IsEnabled="false"></MenuItem>
                     <Separator />
-                    <MenuItem x:Name="importPrjfromMentorMenuItem" Header="Mentor CSV" Click="ImportPrjfromMentor_Click"></MenuItem>
+                    <MenuItem x:Name="importPrjfromMentorMenuItem" Header="Mentor CSV" Command="{StaticResource Command_ImportMentorCsv}" InputGestureText="Ctrl+Shift+I"></MenuItem>
                 </MenuItem>
                 <Separator />
                 <MenuItem x:Name="createPdfMenuItem" Header="Экспорт в pdf" IsEnabled="False" Click="CreatePdf_Click" />

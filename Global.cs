@@ -124,5 +124,48 @@ namespace DocGOST
         public static long ExtractDesignatorGroupAndSelfNum(long designatorValue) {
             return designatorValue & unchecked((long)0xFFFFFFFF0000FFFFUL);
         }
+
+        public static string ParseItersTillLen(ref string str, int maxLineLength, char delimiter = ' ') {
+            string rslt = "";
+            if (str.Length <= maxLineLength) {
+                rslt = str.Trim();
+                str = "";
+                return rslt;
+            }
+            bool bNeedSpace = false;
+            while (str != "") {
+                int pos = str.IndexOf(delimiter);
+                if (pos == -1)
+                    pos = str.Length;
+                if (rslt.Length + pos + (bNeedSpace ? 1 : 0) > maxLineLength) {
+                    if (rslt == "") { // нет ни одного пробела на всю строку - принудительно прерываем
+                        rslt = str.Substring(0, maxLineLength);
+                        str = str.Substring(maxLineLength);
+                    }
+                    break;
+                }
+                string s2 = str.Substring(0, pos);
+                str = str.Substring(pos + 1);
+                if (s2 != "") {
+                    if (bNeedSpace) rslt += delimiter;
+                    rslt += s2;
+                    bNeedSpace = true;
+                }
+            }
+            // Удаляем завершающие пробелы
+            foreach (char c in str)
+                if (c != delimiter) return rslt;
+            str = "";
+            return rslt;
+        }
+
+        public static string ParseIter(ref string str, char delimiter = ' ') {
+            int pos = str.IndexOf(delimiter);
+            if (pos == -1) 
+                pos = str.Length;
+            string rslt = str.Substring(0, pos);
+            str = str.Substring(pos + 1);
+            return rslt;
+        }
     }
 }

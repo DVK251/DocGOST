@@ -23,20 +23,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using DocGOST.Data;
+using iTextSharp.text.pdf.events;
+using static iTextSharp.text.pdf.AcroFields;
 
 
 namespace DocGOST
 {
-    class SpecificationOperations
+    static class SpecificationOperations
     {
-        const int maxNoteLength = 12;
+        const int maxNameLength = 34;// _DVK
+        const int maxNoteLength = 13;
 
-        private long GetDesignatorValue(string designator)
+        static private long GetDesignatorValue(string designator)
         {
             return Global.GetDesignatorValue(designator);
         }
 
-        public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, ref int numberOfValidStrings)
+        static public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, ref int numberOfValidStrings)
         {
             #region Группировка элементов спецификации из раздела "Прочие" с одинаковым наименованием, которые идут подряд            
             List<SpecificationItem> tempList = new List<SpecificationItem>();
@@ -144,8 +147,6 @@ namespace DocGOST
             
             #region Разбиение каждой записи на нужное количество строк
             List<SpecificationItem> tempList2 = new List<SpecificationItem>();
-            const int maxNameLength = 36;
-            const int maxNoteLength = 13;
             //Удаление лишних строк
             for (int i = 0; i < numberOfValidStrings; i++)
             {
@@ -153,13 +154,13 @@ namespace DocGOST
                 {
                     //Разбиение строк, чтобы все надписи вмещались в ячейки.
 
-                    string name = tempList[i].name;
+                    string name = /*tempList[i].group + " " +*/ tempList[i].name/* + (tempList[i].docum != "" ? " " + tempList[i].docum : "")*/;
                     string note = tempList[i].note;
                     string quantity = tempList[i].quantity;
                     string pos = tempList[i].position;
 
-                    string group = tempList[i].group; // _DVK
-                    string docum = tempList[i].docum;
+                    //string group = tempList[i].group; // _DVK
+                    //string docum = tempList[i].docum;
 
                     while ((name != String.Empty) | (note != String.Empty))
                     {
@@ -177,47 +178,33 @@ namespace DocGOST
                             quantity = String.Empty;
                         }
 
+                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, ' ');
                         //Разбираемся с наименованием
-                        if (name.Length > maxNameLength)
-                        {
-                            if ((name.Length - docum.Length - 1) < maxNameLength)
-                            {
-                                tempItem.name = name.Substring(0, name.Length - docum.Length - 1);
-                                name =docum;
-                                docum = String.Empty;
-                            }
-                            else
-                            if (group != String.Empty)
-                            {
-                                tempItem.name = group;
-                                name = name.Replace(group + ' ', String.Empty);
-                                group = String.Empty;
-                            }
-                            else
-                            {
-                                string[] words = name.Split(new Char[] { ' ' });
-                                tempItem.name = words[0] + ' ';
-
-                                for (int j = 1; j < words.Length; j++)
-                                {
-                                    if ((tempItem.name.Length + words[j].Length) > maxNameLength)
-                                    {
-                                        tempItem.name.Substring(0, tempItem.name.Length - 1); // удаляем последний пробел
-                                        name = string.Empty;
-                                        for (int k = j; k < words.Length; k++)
-                                            if (k != (words.Length - 1)) name += words[k] + ' ';
-                                            else name += words[k];
-                                        break;
-                                    }
-                                    else tempItem.name += words[j] + ' ';
-                                }
-                            }
-                        }
-                        else if (name != String.Empty)
-                        {
-                            tempItem.name = name;
-                            name = String.Empty;
-                        }
+                        //if (name.Length > maxNameLength)
+                        //{
+                        //    if ((name.Length - docum.Length - 1) < maxNameLength)
+                        //    {
+                        //        tempItem.name = name.Substring(0, name.Length - docum.Length - 1);
+                        //        name = docum;
+                        //        docum = String.Empty;
+                        //    }
+                        //    else
+                        //    if (group != String.Empty)
+                        //    {
+                        //        tempItem.name = group;
+                        //        name = name.Replace(group + ' ', String.Empty);
+                        //        group = String.Empty;
+                        //    }
+                        //    else
+                        //    {
+                        //        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, ' ');
+                        //    }
+                        //}
+                        //else if (name != String.Empty)
+                        //{
+                        //    tempItem.name = name;
+                        //    name = String.Empty;
+                        //}
 
                         //Разбираемся с примечанием
                         if (note.Length > maxNoteLength)
@@ -260,6 +247,31 @@ namespace DocGOST
             return tempList2;
         }
 
+        static public List<SpecificationItem> BreakLongLinesOnly(List<SpecificationItem> sList) {
+            var rslt = new List<SpecificationItem>();
+            foreach (var item in sList) {
+                if (item.name.Length <= maxNameLength) {
+                    rslt.Add(item);
+                }
+                else {
+                    string name = item.name;
+                    item.name = Global.ParseItersTillLen(ref name, maxNameLength);
+                    rslt.Add(item);
+                    while (name != "") {
+                        var item2 = new SpecificationItem();
+                        item2.makeEmpty();
+                        item2.spSection = item.spSection;
+                        item2.group = item.group;
+                        item2.docum = item.docum;
+                        item2.name = Global.ParseItersTillLen(ref name, maxNameLength);
+                        rslt.Add(item2);
+                    }
+                }
+            }
+            for (int i = 0; i < rslt.Count; i++)
+                rslt[i].id = i + 1;
+            return rslt;
+        }
 
     }
 }

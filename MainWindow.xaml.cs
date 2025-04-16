@@ -32,8 +32,8 @@ using System.Diagnostics;
 using static DocGOST.Global;
 using System.Data.Entity.Core.Metadata.Edm;
 
-// TODO Материалы не переносятся на другую строку при переполнении строки
 // TODO Точка останова при исключении не срабатывает
+// TODO В спецификации сделать, чтобы элементы из иерархических блоков в примечании перечислялись как 1R2..16R2
 
 namespace DocGOST
 {
@@ -2271,7 +2271,7 @@ namespace DocGOST
         }
 
         OpenFileDialog ImportPrjfromMentor_openDlg;
-        private void ImportPrjfromMentor_Click(object sender, RoutedEventArgs e) {
+        public void CommandBinding_ImportMentorCsv(object sender, ExecutedRoutedEventArgs e) { 
             if (ImportPrjfromMentor_openDlg == null) { 
                 ImportPrjfromMentor_openDlg = new OpenFileDialog() {
                     Title = "Выбор CSV-файла, экспортированного из Mentor",
@@ -3411,7 +3411,7 @@ namespace DocGOST
                 (new PerechenOperations()).groupPerechenElements(ref pData, ref numOfPerechenValidStrings);
 
             if (numOfSpecificationStrings > 1) 
-                sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
 
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
@@ -3467,7 +3467,8 @@ namespace DocGOST
             }
 
             if (numOfSpecificationStrings > 1)
-                sOtherData = (new SpecificationOperations()).groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+            sData = SpecificationOperations.BreakLongLinesOnly(sData);
 
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings, false);

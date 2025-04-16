@@ -209,33 +209,7 @@ namespace DocGOST
                         }
 
                         //Разбираемся с наименованием
-                        if (name.Length > maxNameLength)
-                        {
-
-                            string[] words = name.Split(new Char[] { ' ', '-' });
-                            tempItem.name = words[0] + ' ';
-
-                            for (int j = 1; j < words.Length; j++)
-                            {
-                                if ((tempItem.name.Length + words[j].Length) > maxNameLength)
-                                {
-                                    tempItem.name.Substring(0, tempItem.name.Length - 1); // удаляем последний пробел
-                                    name = string.Empty;
-                                    for (int k = j; k < words.Length; k++)
-                                        if (k != (words.Length - 1)) name += words[k] + ' ';
-                                        else name += words[k];
-                                    break;
-                                }
-                                else tempItem.name += words[j] + ' ';
-                            }
-
-                        }
-                        else if (name != String.Empty)
-                        {
-                            tempItem.name = name;
-                            name = String.Empty;
-                        }
-
+                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, ' ');
                         tempList2.Add(tempItem);
                     }
                 }
