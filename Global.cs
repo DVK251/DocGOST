@@ -113,7 +113,7 @@ namespace DocGOST
             return rslt;
         }
 
-        public static int ExtractDesignatorBlockNum(long designatorValue) {
+        public static int ExtractDesignatorHieBlockNum(long designatorValue) {
             return (short)(designatorValue >> 16);
         }
 
@@ -125,19 +125,23 @@ namespace DocGOST
             return designatorValue & unchecked((long)0xFFFFFFFF0000FFFFUL);
         }
 
-        public static string ParseItersTillLen(ref string str, int maxLineLength, char delimiter = ' ') {
+        public static long SwapDesignatorGroupAndSelfNum(long designatorValue) {
+            return (designatorValue & unchecked((long)0xFFFFFFFF00000000UL)) | ((designatorValue & 0xFFFF) << 16) | ((designatorValue & 0xFFFF0000) >> 16);
+        }
+
+        public static string ParseItersTillLen(ref string str, int maxLineLength, string delimiter = " ") {
             string rslt = "";
             if (str.Length <= maxLineLength) {
                 rslt = str.Trim();
                 str = "";
                 return rslt;
             }
-            bool bNeedSpace = false;
+            bool bNeedInsDelimiter = false;
             while (str != "") {
                 int pos = str.IndexOf(delimiter);
                 if (pos == -1)
                     pos = str.Length;
-                if (rslt.Length + pos + (bNeedSpace ? 1 : 0) > maxLineLength) {
+                if (rslt.Length + pos + (bNeedInsDelimiter ? delimiter.Length : 0) > maxLineLength) {
                     if (rslt == "") { // нет ни одного пробела на всю строку - принудительно прерываем
                         rslt = str.Substring(0, maxLineLength);
                         str = str.Substring(maxLineLength);
@@ -145,17 +149,19 @@ namespace DocGOST
                     break;
                 }
                 string s2 = str.Substring(0, pos);
-                str = str.Substring(pos + 1);
+                str = str.Substring(pos + delimiter.Length);
                 if (s2 != "") {
-                    if (bNeedSpace) rslt += delimiter;
+                    if (bNeedInsDelimiter) rslt += delimiter;
                     rslt += s2;
-                    bNeedSpace = true;
+                    bNeedInsDelimiter = true;
                 }
             }
             // Удаляем завершающие пробелы
-            foreach (char c in str)
-                if (c != delimiter) return rslt;
-            str = "";
+            //if (delimiter == " ") { 
+            //    foreach (char c in str)
+            //        if (c != ' ') return rslt;
+            //}
+            //str = "";
             return rslt;
         }
 

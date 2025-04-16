@@ -33,10 +33,12 @@ namespace DocGOST
     {
         const int maxNameLength = 34;// _DVK
         const int maxNoteLength = 13;
+        private enum CombineType { ctUnknone, ctRegular, ctHie };
 
-        static private long GetDesignatorValue(string designator)
-        {
-            return Global.GetDesignatorValue(designator);
+        static public long MakeDesignator_Special(string designator) {
+            var des = Global.GetDesignatorValue(designator);
+            if (Global.ExtractDesignatorHieBlockNum(des) == 0) return des;
+            return Global.SwapDesignatorGroupAndSelfNum(des);
         }
 
         static public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, ref int numberOfValidStrings)
@@ -58,16 +60,15 @@ namespace DocGOST
             tempItem.docum = sList[0].docum;
             tempItem.group = sList[0].group;
 
-            long prevDesignatorValue = GetDesignatorValue(sList[0].designator);
-
+            long prevDesignatorValue = MakeDesignator_Special(sList[0].designator);
 
             for (int i = 1; i < numberOfValidStrings; i++)
             {
-                long designatorValue = GetDesignatorValue(sList[i].designator);
+                long designatorValue = MakeDesignator_Special(sList[i].designator);
 
-                if ((sList[i].name == prevElemName) && (designatorValue == prevDesignatorValue + 1))
+                if ( (sList[i].name == prevElemName) && (designatorValue == prevDesignatorValue + 1) )
                 {
-                    tempItem.note += "," + sList[i].note;
+                    tempItem.note += ", " + sList[i].note;
                     tempItem.quantity = (int.Parse(tempItem.quantity) + 1).ToString();
                 }
                 else
@@ -93,11 +94,9 @@ namespace DocGOST
 
             for (int i = 0; i < numberOfValidStrings; i++)
             {
-                string[] designators = new string[tempList[i].note.Split(new Char[] { ',' }).Length];
-                designators = tempList[i].note.Split(new Char[] { ',' });
+                var designators = tempList[i].note.Split(new string[] {", "}, StringSplitOptions.None);
                 if (designators.Length > 2) tempList[i].note = designators[0] + "..." + designators[designators.Length - 1];
             }
-
 
 
             #endregion
@@ -109,7 +108,7 @@ namespace DocGOST
                 for (int j = i + 1; j < numberOfValidStrings; j++)
                     if ((tempList[j].name == tempList[i].name) && (tempList[j].name != String.Empty))
                     {
-                        tempList[i].note += "," + tempList[j].note;
+                        tempList[i].note += ", " + tempList[j].note;
                         tempList[i].quantity = (int.Parse(tempList[i].quantity) + int.Parse(tempList[j].quantity)).ToString();
                         tempList[j].name = String.Empty;
                     }
@@ -178,7 +177,7 @@ namespace DocGOST
                             quantity = String.Empty;
                         }
 
-                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, ' ');
+                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, " ");
                         //Разбираемся с наименованием
                         //if (name.Length > maxNameLength)
                         //{
@@ -207,29 +206,30 @@ namespace DocGOST
                         //}
 
                         //Разбираемся с примечанием
-                        if (note.Length > maxNoteLength)
-                        {
-                            string[] designators = note.Split(new Char[] { ',' });
-                            tempItem.note = designators[0] + ", ";
+                        tempItem.note = Global.ParseItersTillLen(ref note, maxNoteLength, ", ");
+                        //if (note.Length > maxNoteLength)
+                        //{
+                        //    string[] designators = note.Split(new Char[] { ',' });
+                        //    tempItem.note = designators[0] + ", ";
 
-                            for (int j = 1; j < designators.Length; j++)
-                            {
-                                if ((tempItem.note.Length + designators[j].Length) >= maxNoteLength)
-                                {
-                                    note = string.Empty;
-                                    for (int k = j; k < designators.Length; k++)
-                                        if (k != (designators.Length - 1)) note += designators[k] + ',';
-                                        else note += designators[k];
-                                    break;
-                                }
-                                else tempItem.note += designators[j] + ", ";
-                            }
-                        }
-                        else if (note != String.Empty)
-                        {
-                            tempItem.note = note;
-                            note = String.Empty;
-                        }
+                        //    for (int j = 1; j < designators.Length; j++)
+                        //    {
+                        //        if ((tempItem.note.Length + designators[j].Length) >= maxNoteLength)
+                        //        {
+                        //            note = string.Empty;
+                        //            for (int k = j; k < designators.Length; k++)
+                        //                if (k != (designators.Length - 1)) note += designators[k] + ", ";
+                        //                else note += designators[k];
+                        //            break;
+                        //        }
+                        //        else tempItem.note += designators[j] + ", ";
+                        //    }
+                        //}
+                        //else if (note != String.Empty)
+                        //{
+                        //    tempItem.note = note;
+                        //    note = String.Empty;
+                        //}
 
 
                         tempList2.Add(tempItem);

@@ -32,8 +32,6 @@ using System.Diagnostics;
 using static DocGOST.Global;
 using System.Data.Entity.Core.Metadata.Edm;
 
-// TODO Точка останова при исключении не срабатывает
-// TODO В спецификации сделать, чтобы элементы из иерархических блоков в примечании перечислялись как 1R2..16R2
 
 namespace DocGOST
 {
@@ -2376,7 +2374,7 @@ namespace DocGOST
                             if (bCompsNOthers) {
                                 if (SA[LINE_PIDX_VALUE] == "__FILE__") {
                                     string fn2 = SA[LINE_PIDX_PART_NUMBER];
-                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), Path.GetFileName(fn2)), SA[LINE_PIDX_QTY].ToInt32(1, 999), bCompsNOthers: true);
+                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), fn2), SA[LINE_PIDX_QTY].ToInt32(1, 999), bCompsNOthers: true);
                                     rslt_list.AddRange(r.comps);
                                     oth_list.AddRange(r.others);
                                     continue;
@@ -2972,7 +2970,7 @@ namespace DocGOST
                 });
                 var blmap = new Dictionary<int, List<PerechenItem>>();
                 foreach (var pi in perechenList) {
-                    int bln = Global.ExtractDesignatorBlockNum( MakeDesignatorForOrdering_v2(pi.designator) );
+                    int bln = Global.ExtractDesignatorHieBlockNum( MakeDesignatorForOrdering_v2(pi.designator) );
                     if (bln == 0) {
                         hiePerechenBlockList[0].perechenItems.Add(pi);
                         continue;
@@ -3018,7 +3016,7 @@ namespace DocGOST
             List<VedomostItem> vedomostListSorted = new List<VedomostItem>();
 
             perechenListSorted = perechenList.OrderBy(x => MakeDesignatorForOrdering_v2(x.designator, report)).ToList();
-            specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
+            specOtherListSorted = specList.Where(x => x.spSection == ((int)Global.SpSections.Other)).OrderBy(x => SpecificationOperations.MakeDesignator_Special(x.designator)).ToList();
             vedomostListSorted = vedomostList.OrderBy(x => MakeDesignatorForOrdering_v2(x.designator)).ToList();
 
             for (int i = 0; i < perechenListSorted.Count; i++) 
