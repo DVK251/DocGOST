@@ -146,7 +146,7 @@ namespace DocGOST
             return (designatorValue & unchecked((long)0xFFFFFFFF00000000UL)) | ((designatorValue & 0xFFFF) << 16) | ((designatorValue & 0xFFFF0000) >> 16);
         }
 
-        public static string ParseItersTillLen(ref string str, int maxLineLength, string delimiter = " ") {
+        public static string ParseItersTillLen(ref string str, int maxLineLength, string delimiter, bool bTryDashToo) {
             string rslt = "";
             if (str.Length <= maxLineLength) {
                 rslt = str.Trim();
@@ -159,6 +159,21 @@ namespace DocGOST
                 if (pos == -1)
                     pos = str.Length;
                 if (rslt.Length + pos + (bNeedInsDelimiter ? delimiter.Length : 0) > maxLineLength) {
+                    if (bTryDashToo) {
+                        int dpos = -1;
+                        while (true) {
+                            int new_dpos = str.IndexOf('-', dpos + 1);
+                            if (new_dpos == -1) break;
+                            if (rslt.Length + (new_dpos + 1) + (bNeedInsDelimiter ? delimiter.Length : 0) > maxLineLength) break;
+                            dpos = new_dpos;
+                        } 
+                        if (dpos >= 0) {
+                            if (bNeedInsDelimiter) rslt += delimiter;
+                            rslt += str.Substring(0, dpos + 1);
+                            str = str.Substring(dpos + 1);
+                            break;
+                        }
+                    }
                     if (rslt == "") { // нет ни одного пробела на всю строку - принудительно прерываем
                         rslt = str.Substring(0, maxLineLength);
                         str = str.Substring(maxLineLength);

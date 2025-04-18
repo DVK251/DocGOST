@@ -177,7 +177,7 @@ namespace DocGOST
                             quantity = String.Empty;
                         }
 
-                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, " ");
+                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, " ", true);
                         //Разбираемся с наименованием
                         //if (name.Length > maxNameLength)
                         //{
@@ -206,7 +206,7 @@ namespace DocGOST
                         //}
 
                         //Разбираемся с примечанием
-                        tempItem.note = Global.ParseItersTillLen(ref note, maxNoteLength, ", ");
+                        tempItem.note = Global.ParseItersTillLen(ref note, maxNoteLength, ", ", false);
                         //if (note.Length > maxNoteLength)
                         //{
                         //    string[] designators = note.Split(new Char[] { ',' });
@@ -255,7 +255,7 @@ namespace DocGOST
                 }
                 else {
                     string name = item.name;
-                    item.name = Global.ParseItersTillLen(ref name, maxNameLength);
+                    item.name = Global.ParseItersTillLen(ref name, maxNameLength, " ", true);
                     rslt.Add(item);
                     while (name != "") {
                         var item2 = new SpecificationItem();
@@ -263,7 +263,7 @@ namespace DocGOST
                         item2.spSection = item.spSection;
                         item2.group = item.group;
                         item2.docum = item.docum;
-                        item2.name = Global.ParseItersTillLen(ref name, maxNameLength);
+                        item2.name = Global.ParseItersTillLen(ref name, maxNameLength, " ", true);
                         rslt.Add(item2);
                     }
                 }

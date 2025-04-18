@@ -209,7 +209,7 @@ namespace DocGOST
                         }
 
                         //Разбираемся с наименованием
-                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength);
+                        tempItem.name = Global.ParseItersTillLen(ref name, maxNameLength, " ", true);
                         tempList2.Add(tempItem);
                     }
                 }
