@@ -89,14 +89,7 @@ namespace DocGOST
 
                     //Добавляем название раздела
                     SpecificationItem header = new SpecificationItem();
-                    if (sItem.spSection == ((int)Global.SpSections.Documentation)) header.name = "Документация";
-                    if (sItem.spSection == ((int)Global.SpSections.Compleksi)) header.name = "Комплексы";
-                    if (sItem.spSection == ((int)Global.SpSections.SborEd)) header.name = "Сборочные единицы";
-                    if (sItem.spSection == ((int)Global.SpSections.Details)) header.name = "Детали";
-                    if (sItem.spSection == ((int)Global.SpSections.Standard)) header.name = "Стандартные изделия";
-                    if (sItem.spSection == ((int)Global.SpSections.Other)) header.name = "Прочие изделия";
-                    if (sItem.spSection == ((int)Global.SpSections.Materials)) header.name = "Материалы";
-                    if (sItem.spSection == ((int)Global.SpSections.Compleсts)) header.name = "Комплекты";
+                    header.name = ((Global.SpSections)sItem.spSection).FullName();
                     header.group = "Header";
 
                     specPrintList.Add(header);
@@ -113,59 +106,45 @@ namespace DocGOST
                 prevSpSection = sItem.spSection;
             }
 
-
-            bool isFileLocked = false;
             Document document = null;
             PdfWriter writer = null;
-            try
-            {
-                document = new Document(PageSize.A4);
-                writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
-            }
-            catch
-            {
-                MessageBox.Show("Не удаётся получить доступ к файлу " + pdfPath + ". Скорее всего, файл открыт в другой программе.", "Ошибка", MessageBoxButton.OK);
-                isFileLocked = true;
-            }
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
 
-            if (isFileLocked == false)
-            {
-                document.Open();
+            document.Open();
 
-                DrawCommonStampA4(document, writer, DocType.Specification);
+            DrawCommonStampA4(document, writer, DocType.Specification);
 
-                //Вычислим общее количество страниц без учёта листа регистрации
-                int totalPageCount;
-                if (numberOfPrintStrings <= spec_first_page_rows_count) totalPageCount = 1;
-                else totalPageCount = 2 + (numberOfPrintStrings - spec_first_page_rows_count) / spec_subseq_page_rows_count;
+            //Вычислим общее количество страниц без учёта листа регистрации
+            int totalPageCount;
+            if (numberOfPrintStrings <= spec_first_page_rows_count) totalPageCount = 1;
+            else totalPageCount = 2 + (numberOfPrintStrings - spec_first_page_rows_count) / spec_subseq_page_rows_count;
 
-                DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Specification);
+            DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Specification);
 
-                DrawSpecificationTable(document, writer, 0, specPrintList);
+            DrawSpecificationTable(document, writer, 0, specPrintList);
 
 
-                if (numberOfPrintStrings > spec_first_page_rows_count)
-                    for (int i = 1; i < totalPageCount; i++)
-                    {
-                        document.NewPage();
-
-                        DrawCommonStampA4(document, writer, DocType.Specification);
-                        DrawSubsequentStampA4(document, writer, i + startPage, DocType.Specification);
-                        DrawSpecificationTable(document, writer, i, specPrintList);
-
-                    }
-                if (addListRegistr)
+            if (numberOfPrintStrings > spec_first_page_rows_count)
+                for (int i = 1; i < totalPageCount; i++)
                 {
                     document.NewPage();
 
                     DrawCommonStampA4(document, writer, DocType.Specification);
-                    DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Specification);
-                    DrawListRegistrTable(document, writer);
-                }
-                document.Close();
-                writer.Close();
-            }
+                    DrawSubsequentStampA4(document, writer, i + startPage, DocType.Specification);
+                    DrawSpecificationTable(document, writer, i, specPrintList);
 
+                }
+            if (addListRegistr)
+            {
+                document.NewPage();
+
+                DrawCommonStampA4(document, writer, DocType.Specification);
+                DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Specification);
+                DrawListRegistrTable(document, writer);
+            }
+            document.Close();
+            writer.Close();
         }
 
         public void CreatePcbSpecification(string pdfPath, int startPage, bool addListRegistr, int tempNumber)
@@ -190,14 +169,7 @@ namespace DocGOST
 
                     //Добавляем название раздела
                     PcbSpecificationItem header = new PcbSpecificationItem();
-                    if (sItem.spSection == ((int)Global.SpSections.Documentation)) header.name = "Документация";
-                    if (sItem.spSection == ((int)Global.SpSections.Compleksi)) header.name = "Комплексы";
-                    if (sItem.spSection == ((int)Global.SpSections.SborEd)) header.name = "Сборочные единицы";
-                    if (sItem.spSection == ((int)Global.SpSections.Details)) header.name = "Детали";
-                    if (sItem.spSection == ((int)Global.SpSections.Standard)) header.name = "Стандартные изделия";
-                    if (sItem.spSection == ((int)Global.SpSections.Other)) header.name = "Прочие изделия";
-                    if (sItem.spSection == ((int)Global.SpSections.Materials)) header.name = "Материалы";
-                    if (sItem.spSection == ((int)Global.SpSections.Compleсts)) header.name = "Комплекты";
+                    header.name = ((Global.SpSections)sItem.spSection).FullName();
                     header.group = "Header";
 
                     specPrintList.Add(header);
@@ -214,179 +186,136 @@ namespace DocGOST
                 prevSpSection = sItem.spSection;
             }
 
-
-            bool isFileLocked = false;
             Document document = null;
             PdfWriter writer = null;
-            try
-            {
-                document = new Document(PageSize.A4);
-                writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
-            }
-            catch
-            {
-                MessageBox.Show("Не удаётся получить доступ к файлу " + pdfPath + ". Скорее всего, файл открыт в другой программе.", "Ошибка", MessageBoxButton.OK);
-                isFileLocked = true;
-            }
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
 
-            if (isFileLocked == false)
-            {
-                document.Open();
+            document.Open();
 
-                DrawCommonStampA4(document, writer, DocType.Specification);
+            DrawCommonStampA4(document, writer, DocType.Specification);
 
-                //Вычислим общее количество страниц без учёта листа регистрации
-                int totalPageCount;
-                if (numberOfPrintStrings <= spec_first_page_rows_count) totalPageCount = 1;
-                else totalPageCount = 2 + (numberOfPrintStrings - spec_first_page_rows_count) / spec_subseq_page_rows_count;
+            //Вычислим общее количество страниц без учёта листа регистрации
+            int totalPageCount;
+            if (numberOfPrintStrings <= spec_first_page_rows_count) totalPageCount = 1;
+            else totalPageCount = 2 + (numberOfPrintStrings - spec_first_page_rows_count) / spec_subseq_page_rows_count;
 
-                DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.PcbSpecification);
+            DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.PcbSpecification);
 
-                DrawPcbSpecificationTable(document, writer, 0, specPrintList);
+            DrawPcbSpecificationTable(document, writer, 0, specPrintList);
 
 
-                if (numberOfPrintStrings > spec_first_page_rows_count)
-                    for (int i = 1; i < totalPageCount; i++)
-                    {
-                        document.NewPage();
-
-                        DrawCommonStampA4(document, writer, DocType.Specification);
-                        DrawSubsequentStampA4(document, writer, i + startPage, DocType.Specification);
-                        DrawPcbSpecificationTable(document, writer, i, specPrintList);
-
-                    }
-                if (addListRegistr)
+            if (numberOfPrintStrings > spec_first_page_rows_count)
+                for (int i = 1; i < totalPageCount; i++)
                 {
                     document.NewPage();
 
                     DrawCommonStampA4(document, writer, DocType.Specification);
-                    DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Specification);
-                    DrawListRegistrTable(document, writer);
-                }
-                document.Close();
-                writer.Close();
-            }
+                    DrawSubsequentStampA4(document, writer, i + startPage, DocType.Specification);
+                    DrawPcbSpecificationTable(document, writer, i, specPrintList);
 
+                }
+            if (addListRegistr)
+            {
+                document.NewPage();
+
+                DrawCommonStampA4(document, writer, DocType.Specification);
+                DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Specification);
+                DrawListRegistrTable(document, writer);
+            }
+            document.Close();
+            writer.Close();
         }
 
         public void CreatePerechen(string pdfPath, int startPage, bool addListRegistr, int tempNumber)
         {
-            bool isFileLocked = false;
-
             Document document = null;
             PdfWriter writer = null;
 
-            try
-            {
-                document = new Document(PageSize.A4);
-                writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
-            }
-            catch
-            {
-                MessageBox.Show("Не удаётся получить доступ к файлу " + pdfPath + ". Скорее всего, файл открыт в другой программе.", "Ошибка", MessageBoxButton.OK);
-                isFileLocked = true;
-            }
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
 
+            document.Open();
 
-            if (isFileLocked == false)
-            {
-                document.Open();
+            DrawCommonStampA4(document, writer, DocType.Perechen);
 
-                DrawCommonStampA4(document, writer, DocType.Perechen);
+            int numberOfValidStrings = project.GetPerechenLength(tempNumber);
 
-                int numberOfValidStrings = project.GetPerechenLength(tempNumber);
+            //Вычисляем общее количество листов без учёта листа регистрации
+            int totalPageCount;
+            if (numberOfValidStrings <= perech_first_page_rows_count) totalPageCount = 1;
+            else totalPageCount = 2 + (numberOfValidStrings - perech_first_page_rows_count) / perech_subseq_page_rows_count;
 
-                //Вычисляем общее количество листов без учёта листа регистрации
-                int totalPageCount;
-                if (numberOfValidStrings <= perech_first_page_rows_count) totalPageCount = 1;
-                else totalPageCount = 2 + (numberOfValidStrings - perech_first_page_rows_count) / perech_subseq_page_rows_count;
+            DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Perechen);
 
-                DrawFirstPageStampA4(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Perechen);
+            DrawPerechenTable(document, writer, 0, tempNumber);
 
-                DrawPerechenTable(document, writer, 0, tempNumber);
-
-                if (numberOfValidStrings > perech_first_page_rows_count)
-                    for (int i = 1; i < totalPageCount; i++)
-                    {
-                        document.NewPage();
-
-                        DrawCommonStampA4(document, writer, DocType.Perechen);
-                        DrawSubsequentStampA4(document, writer, i + startPage, DocType.Perechen);
-                        DrawPerechenTable(document, writer, i, tempNumber);
-
-                    }
-                if (addListRegistr)
+            if (numberOfValidStrings > perech_first_page_rows_count)
+                for (int i = 1; i < totalPageCount; i++)
                 {
                     document.NewPage();
 
                     DrawCommonStampA4(document, writer, DocType.Perechen);
-                    DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Perechen);
-                    DrawListRegistrTable(document, writer);
-                }
-                document.Close();
-                writer.Close();
-            }
+                    DrawSubsequentStampA4(document, writer, i + startPage, DocType.Perechen);
+                    DrawPerechenTable(document, writer, i, tempNumber);
 
+                }
+            if (addListRegistr)
+            {
+                document.NewPage();
+
+                DrawCommonStampA4(document, writer, DocType.Perechen);
+                DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Perechen);
+                DrawListRegistrTable(document, writer);
+            }
+            document.Close();
+            writer.Close();
         }
 
         public void CreateVedomost(string pdfPath, int startPage, bool addListRegistr, int tempNumber)
         {
-            bool isFileLocked = false;
-
             Document document = null;
             PdfWriter writer = null;
 
-            try
-            {
-                document = new Document(PageSize.A3.Rotate());
+            document = new Document(PageSize.A3.Rotate());
+            writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
 
-                writer = PdfWriter.GetInstance(document, new FileStream(pdfPath, FileMode.Create));
-            }
-            catch
-            {
-                MessageBox.Show("Не удаётся получить доступ к файлу " + pdfPath + ". Скорее всего, файл открыт в другой программе.", "Ошибка", MessageBoxButton.OK);
-                isFileLocked = true;
-            }
+            document.Open();
 
-            if (isFileLocked == false)
-            {
-                document.Open();
+            DrawCommonStampA3(document, writer, DocType.Perechen);
 
-                DrawCommonStampA3(document, writer, DocType.Perechen);
+            int numberOfValidStrings = project.GetVedomostLength(tempNumber);
 
-                int numberOfValidStrings = project.GetVedomostLength(tempNumber);
+            //Вычисляем общее количество листов без учёта листа регистрации
+            int totalPageCount;
+            if (numberOfValidStrings <= vedomost_first_page_rows_count) totalPageCount = 1;
+            else totalPageCount = 2 + (numberOfValidStrings - vedomost_first_page_rows_count) / vedomost_subseq_page_rows_count;
 
-                //Вычисляем общее количество листов без учёта листа регистрации
-                int totalPageCount;
-                if (numberOfValidStrings <= vedomost_first_page_rows_count) totalPageCount = 1;
-                else totalPageCount = 2 + (numberOfValidStrings - vedomost_first_page_rows_count) / vedomost_subseq_page_rows_count;
+            DrawFirstPageStampA3(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Vedomost);
 
-                DrawFirstPageStampA3(document, writer, startPage, totalPageCount + (addListRegistr ? 1 : 0) + (startPage - 1), DocType.Vedomost);
+            DrawVedomostTable(document, writer, 0, tempNumber);
 
-                DrawVedomostTable(document, writer, 0, tempNumber);
-
-                if (numberOfValidStrings > vedomost_first_page_rows_count)
-                    for (int i = 1; i < totalPageCount; i++)
-                    {
-                        document.NewPage();
-
-                        DrawCommonStampA3(document, writer, DocType.Vedomost);
-                        DrawSubsequentStampA3(document, writer, i + startPage, DocType.Vedomost);
-                        DrawVedomostTable(document, writer, i, tempNumber);
-
-                    }
-                if (addListRegistr)
+            if (numberOfValidStrings > vedomost_first_page_rows_count)
+                for (int i = 1; i < totalPageCount; i++)
                 {
-                    document.SetPageSize(PageSize.A4);
                     document.NewPage();
 
-                    DrawCommonStampA4(document, writer, DocType.Vedomost);
-                    DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Vedomost);
-                    DrawListRegistrTable(document, writer);
+                    DrawCommonStampA3(document, writer, DocType.Vedomost);
+                    DrawSubsequentStampA3(document, writer, i + startPage, DocType.Vedomost);
+                    DrawVedomostTable(document, writer, i, tempNumber);
+
                 }
-                document.Close();
-                writer.Close();
+            if (addListRegistr)
+            {
+                document.SetPageSize(PageSize.A4);
+                document.NewPage();
+
+                DrawCommonStampA4(document, writer, DocType.Vedomost);
+                DrawSubsequentStampA4(document, writer, totalPageCount + startPage, DocType.Vedomost);
+                DrawListRegistrTable(document, writer);
             }
+            document.Close();
+            writer.Close();
 
         }
 

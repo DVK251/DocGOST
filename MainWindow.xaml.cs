@@ -2336,12 +2336,12 @@ namespace DocGOST
             var subst_map = new Dictionary<string, (string pn, string tu, string manuf)>();
             var report = new List<string>();
 
-            var Spec_StrToSection = new Dictionary<string, (SpSections sec, string secName)>() {
-                { "DET", (SpSections.Details, "Детали") },
-                { "MAT", (SpSections.Materials, "Материалы") }, 
-                { "STD", (SpSections.Standard, "Стандартные изделия") },
-                { "DOC", (SpSections.Documentation, "Документация") },
-                { "OTH", (SpSections.Other, "Прочие изделия") }
+            var Spec_StrToSection = new Dictionary<string, Global.SpSections>() {
+                { "DET", SpSections.Details },
+                { "MAT", SpSections.Materials }, 
+                { "STD", SpSections.Standard },
+                { "DOC", SpSections.Documentation },
+                { "OTH", SpSections.Other }
             };
 
             string[] LoadFileHeader(CsvReader dataFile) {
@@ -2401,7 +2401,7 @@ namespace DocGOST
                             }
                             else {
                                 var section = Spec_StrToSection.GetValueRE(SA[LINE_PIDX_PART_NUMBER]);
-                                if (section.sec != SpSections.Documentation) { 
+                                if (section != SpSections.Documentation) { 
                                     var dqty = DoubleComma.Parse( SA[LINE_PIDX_QTY] );
                                     if (dqty <= 0.0) 
                                         throw new Exception("Wrong Quantity");
@@ -2840,8 +2840,10 @@ namespace DocGOST
                     try {
                         var prop = litem[j];
                         switch (prop.Name) {
-                            case sectionName: tempSpecification.spSection = (int)Spec_StrToSection[prop.Text].sec; 
-                                tempVedomost.group = tempVedomost.groupPlural = Spec_StrToSection[prop.Text].secName; 
+                            case sectionName: 
+                                var sec = Spec_StrToSection[prop.Text];
+                                tempSpecification.spSection = (int)sec; 
+                                tempVedomost.group = tempVedomost.groupPlural = sec.FullName(); 
                                 if (tempSpecification.spSection == (int)SpSections.Documentation) bHaveDocAdditionals = true; 
                                 break;
                             case shifrName: tempSpecification.oboznachenie = prop.Text; break;

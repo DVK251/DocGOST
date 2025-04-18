@@ -19,9 +19,27 @@
  */
 
 using System;
+using static DocGOST.Global;
 
 namespace DocGOST
 {
+    static class SpSectionsExtensions
+    {
+        public static string FullName(this SpSections sec) {
+            switch (sec) {
+                case SpSections.Documentation: return "Документация";
+                case SpSections.Compleksi: return "Комплексы";
+                case SpSections.SborEd: return "Сборочные единицы";
+                case SpSections.Details: return "Детали";
+                case SpSections.Standard: return "Стандартные изделия";
+                case SpSections.Other: return "Прочие изделия";
+                case SpSections.Materials: return "Материалы";
+                case SpSections.Compleсts: return "Комплекты";
+                default: return "";
+            }
+        }
+    }
+
     public class Global
     {
         // Перечисление для разделов спецификации в соответствии с ГОСТ 2.106-96
@@ -36,8 +54,6 @@ namespace DocGOST
             Materials, // Материалы
             Compleсts // Комплекты
         }
-
-      
 
         // Операции с ID для спецификации и перечня
 
