@@ -101,6 +101,14 @@ namespace DocGOST.Utils
             return vi;
         }
 
+        public static float ToFloat32(this string value, float min, float max) {
+            float vi = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+            if (!CommonProc.IsInRange(vi, min, max)) {
+                throw new ArgumentOutOfRangeException($"Число '{value}' находится вне допустимого диапазона {min}..{max}");
+            }
+            return vi;
+        }
+
         public static int ToInt32(this string value) {
             return int.Parse(value);
         }

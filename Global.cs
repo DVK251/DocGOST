@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using static DocGOST.Global;
 
 namespace DocGOST
@@ -188,6 +189,10 @@ namespace DocGOST
             string rslt = str.Substring(0, pos);
             str = str.Substring(pos + 1);
             return rslt;
+        }
+
+        // Используется для рисования пользовательской таблицы вместо той части 1-го листа штампа документа, на которой отображаются поля 24 и 25 ("Справ. №" и "Перв. примен.")
+        public class Custom_24_25: List<( float YPos, float Height, List<(float width_mm, string text, bool is_align_center)> cells )> {
         }
     }
 }

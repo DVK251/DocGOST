@@ -25,6 +25,8 @@ using System.IO;
 using iTextSharp.text.pdf;
 using iTextSharp.text;
 using DocGOST.Data;
+using static DocGOST.Global;
+using System.Windows.Controls.Primitives;
 
 namespace DocGOST
 {
@@ -45,6 +47,7 @@ namespace DocGOST
         static BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
         Font normal, big, veryBig;
         ProjectDB project;
+        Custom_24_25 custom2425;
 
         private enum DocType
         {
@@ -54,13 +57,14 @@ namespace DocGOST
             PcbSpecification
         }
 
-        public PdfOperations(string projectPath)
+        public PdfOperations(string projectPath, Custom_24_25 custom2425)
         {
             normal = new Font(fontGostA, 11f, Font.ITALIC, BaseColor.BLACK);
             big = new Font(fontGostA, 18f, Font.ITALIC, BaseColor.BLACK);
             veryBig = new Font(fontGostA, 22f, Font.ITALIC, BaseColor.BLACK);
 
             project = new ProjectDB(projectPath);
+            this.custom2425 = custom2425;
         }
 
         public static float MeasureTextWidth(string str, float fontSize) {
@@ -319,6 +323,17 @@ namespace DocGOST
 
         }
 
+        string GetOsnNadpisItem(DocType docType, string itemId) {
+            var item = project.GetOsnNadpisItem(itemId);
+            switch (docType) {
+                case DocType.Specification: return item.specificationValue;
+                case DocType.Perechen: return item.perechenValue;
+                case DocType.Vedomost: return item.vedomostValue;
+                case DocType.PcbSpecification: return item.pcbSpecificationValue;
+                default: return "";
+            }
+        }
+
         private void DrawCommonStampA4(Document doc, PdfWriter wr, DocType docType)
         {
 
@@ -354,8 +369,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A4;
             table19_23.AddCell(currentCell);
             string gr19Text = String.Empty;
-            if (docType == DocType.Specification) gr19Text = project.GetOsnNadpisItem("19").specificationValue;
-            if (docType == DocType.Perechen) gr19Text = project.GetOsnNadpisItem("19").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr19Text = GetOsnNadpisItem(docType, "19");
             currentCell.Phrase = new Phrase(gr19Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -375,8 +389,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A4;
             table19_23.AddCell(currentCell);
             string gr21Text = String.Empty;
-            if (docType == DocType.Specification) gr21Text = project.GetOsnNadpisItem("21").specificationValue;
-            if (docType == DocType.Perechen) gr21Text = project.GetOsnNadpisItem("21").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr21Text = GetOsnNadpisItem(docType, "21");
             currentCell.Phrase = new Phrase(gr21Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -387,8 +400,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A4;
             table19_23.AddCell(currentCell);
             string gr22Text = String.Empty;
-            if (docType == DocType.Specification) gr22Text = project.GetOsnNadpisItem("22").specificationValue;
-            if (docType == DocType.Perechen) gr22Text = project.GetOsnNadpisItem("22").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr22Text = GetOsnNadpisItem(docType, "22");
             currentCell.Phrase = new Phrase(gr22Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -468,8 +480,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A3;
             table19_23.AddCell(currentCell);
             string gr19Text = String.Empty;
-            if (docType == DocType.Specification) gr19Text = project.GetOsnNadpisItem("19").specificationValue;
-            if (docType == DocType.Perechen) gr19Text = project.GetOsnNadpisItem("19").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr19Text = GetOsnNadpisItem(docType, "19");
             currentCell.Phrase = new Phrase(gr19Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -489,8 +500,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A3;
             table19_23.AddCell(currentCell);
             string gr21Text = String.Empty;
-            if (docType == DocType.Specification) gr21Text = project.GetOsnNadpisItem("21").specificationValue;
-            if (docType == DocType.Perechen) gr21Text = project.GetOsnNadpisItem("21").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr21Text = GetOsnNadpisItem(docType, "21");
             currentCell.Phrase = new Phrase(gr21Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -501,8 +511,7 @@ namespace DocGOST
             currentCell.FixedHeight = 25 * mm_A3;
             table19_23.AddCell(currentCell);
             string gr22Text = String.Empty;
-            if (docType == DocType.Specification) gr22Text = project.GetOsnNadpisItem("22").specificationValue;
-            if (docType == DocType.Perechen) gr22Text = project.GetOsnNadpisItem("22").perechenValue;
+            if (docType == DocType.Specification || docType == DocType.Perechen) gr22Text = GetOsnNadpisItem(docType, "22");
             currentCell.Phrase = new Phrase(gr22Text, normal);
             currentCell.PaddingLeft = 2;
             table19_23.AddCell(currentCell);
@@ -547,21 +556,12 @@ namespace DocGOST
             #endregion
         }
 
-        private void DrawFirstPageStampA4(Document doc, PdfWriter wr, int pageNumber, int pagesTotal, DocType docType)
-        {
-
-
-            PdfContentByte cb = wr.DirectContent;
-
-            float[] tbldWidths;
-            float mm_A4 = doc.PageSize.Width / 210;
-
-
+        void DrawFirstPageStamp_Fields24_25(PdfContentByte cb, DocType docType, float mm_mult) {
             #region Рисование табицы с графами 24,25            
             PdfPTable table24_25 = new PdfPTable(2);
-            table24_25.TotalWidth = 12 * mm_A4;
+            table24_25.TotalWidth = 12 * mm_mult;
             table24_25.LockedWidth = true;
-            tbldWidths = new float[2];
+            var tbldWidths = new float[2];
             tbldWidths[0] = 5;
             tbldWidths[1] = 7;
             table24_25.SetWidths(tbldWidths);
@@ -574,46 +574,89 @@ namespace DocGOST
             currentCell.Padding = 0;
             currentCell.VerticalAlignment = Element.ALIGN_CENTER;
             currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
-            currentCell.FixedHeight = 60 * mm_A4;
+            currentCell.FixedHeight = 60 * mm_mult;
             table24_25.AddCell(currentCell);
-            string gr24Text = String.Empty;
-            if (docType == DocType.Specification) gr24Text = project.GetOsnNadpisItem("24").specificationValue;
-            if (docType == DocType.Perechen) gr24Text = project.GetOsnNadpisItem("24").perechenValue;
-            if (docType == DocType.PcbSpecification) gr24Text = project.GetOsnNadpisItem("24").pcbSpecificationValue;
+            string gr24Text = GetOsnNadpisItem(docType, "24");
             currentCell.Phrase = new Phrase(gr24Text, normal);
             currentCell.PaddingLeft = 2;
             table24_25.AddCell(currentCell);
-            table24_25.WriteSelectedRows(0, 1, 8 * mm_A4, 232 * mm_A4, cb);
+            table24_25.WriteSelectedRows(0, 1, 8 * mm_mult, 232 * mm_mult, cb);
             // Заполнение графы 25:
             currentCell.Phrase = new Phrase("Перв. примен.", normal);
             currentCell.PaddingLeft = 0;
-            currentCell.FixedHeight = 60 * mm_A4;
+            currentCell.FixedHeight = 60 * mm_mult;
             table24_25.AddCell(currentCell);
-            string gr25Text = String.Empty;
-            if (docType == DocType.Specification) gr25Text = project.GetOsnNadpisItem("25").specificationValue;
-            if (docType == DocType.Perechen) gr25Text = project.GetOsnNadpisItem("25").perechenValue;
-            if (docType == DocType.PcbSpecification) gr25Text = project.GetOsnNadpisItem("25").pcbSpecificationValue;
+            string gr25Text = GetOsnNadpisItem(docType, "25");
             currentCell.Phrase = new Phrase(gr25Text, normal);
             currentCell.PaddingLeft = 2;
             table24_25.AddCell(currentCell);
-            table24_25.WriteSelectedRows(1, 2, 8 * mm_A4, 292 * mm_A4, cb);
+            table24_25.WriteSelectedRows(1, 2, 8 * mm_mult, 292 * mm_mult, cb);
             #endregion
+        }
+
+        void DrawFirstPageStamp_CustomFields24_25(PdfContentByte cb, DocType docType, float mm_mult) {
+            #region Рисование пользовательского варианта табицы вместо таблицы с графами 24,25
+            if (custom2425.Count == 0) return; // no table
+
+            float tbl_width_mm = 0;
+            foreach (var item in custom2425[0].cells)
+                tbl_width_mm += item.width_mm;
+            float ypos_mm = custom2425[0].YPos;
+
+            PdfPTable table = new PdfPTable( custom2425[0].cells.Count );
+            table.TotalWidth = tbl_width_mm * mm_mult;
+            table.LockedWidth = true;
+            for (int i = 0; i < custom2425.Count; i++) {
+                var row = custom2425[i];
+                var widths = new float[row.cells.Count];
+                for (int j = 0; j < row.cells.Count; j++)
+                    widths[j] = row.cells[j].width_mm;
+                table.SetWidths(widths);
+                foreach (var cell in row.cells) { 
+                    string text = cell.text;
+                    if (text.StartsWith("{{") && text.EndsWith("}}")) { // _DDD check
+                        text = GetOsnNadpisItem(docType, text.Substring(2, text.Length - 4));
+                    }
+                    PdfPCell currentCell = new PdfPCell(new Phrase(text, normal));
+                    currentCell.BorderWidth = 1;
+                    currentCell.Rotation = 90;
+                    currentCell.HasFixedHeight();
+                    currentCell.Padding = 0;
+                    currentCell.PaddingBottom = 1 * mm_mult;
+                    currentCell.VerticalAlignment = Element.ALIGN_CENTER; // _DDD check
+                    currentCell.HorizontalAlignment = cell.is_align_center ? Element.ALIGN_CENTER : Element.ALIGN_LEFT;
+                    currentCell.FixedHeight = row.Height * mm_mult;
+                    table.AddCell(currentCell);
+                }
+                table.WriteSelectedRows(i, i + 1, (20 - tbl_width_mm) * mm_mult, (ypos_mm + row.Height) * mm_mult, cb);
+                ypos_mm += row.Height;
+            }
+            #endregion
+        }
+
+        private void DrawFirstPageStampA4(Document doc, PdfWriter wr, int pageNumber, int pagesTotal, DocType docType)
+        {
+            PdfContentByte cb = wr.DirectContent;
+            PdfPCell currentCell;
+
+            float[] tbldWidths;
+            float mm_A4 = doc.PageSize.Width / 210;
+            if (custom2425 == null)
+                DrawFirstPageStamp_Fields24_25(cb, docType, mm_A4);
+            else
+                DrawFirstPageStamp_CustomFields24_25(cb, docType, mm_A4);
 
             #region Рисование графы 1           
             PdfPTable table1 = new PdfPTable(1);
             table1.TotalWidth = 70 * mm_A4;
             table1.LockedWidth = true;
-
-            
+          
 
             //Определяем, сколько строчек нужно для наименования изделия:
             int kolvoStrGg1 = 2;
 
             string[] naimenovanieStr;
-            string gr1aText = String.Empty;
-            if (docType == DocType.Specification) gr1aText = project.GetOsnNadpisItem("1a").specificationValue;
-            if (docType == DocType.Perechen) gr1aText = project.GetOsnNadpisItem("1a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr1aText = project.GetOsnNadpisItem("1a").pcbSpecificationValue;
+            string gr1aText = GetOsnNadpisItem(docType, "1a");
             int naimenovaieMaxLength = 25;
             if (gr1aText.Length > 50) naimenovaieMaxLength = 40;
 
@@ -629,7 +672,6 @@ namespace DocGOST
 
             naimenovanieStr = new string[kolvoStrGg1];
             for (int i = 0; i < kolvoStrGg1; i++) naimenovanieStr[i] = String.Empty;
-
 
 
             int curStrNum = 0;
@@ -657,9 +699,7 @@ namespace DocGOST
                 currentCell.FixedHeight = 18 * mm_A4;
                 table1.AddCell(currentCell);
                 table1.WriteSelectedRows(0, 1, 85 * mm_A4, 30 * mm_A4, cb);
-                string gr1bText = project.GetOsnNadpisItem("1b").perechenValue;
-                if (docType == DocType.Specification) gr1bText = project.GetOsnNadpisItem("1b").specificationValue;
-                if (docType == DocType.PcbSpecification) gr1bText = project.GetOsnNadpisItem("1b").pcbSpecificationValue;
+                string gr1bText = GetOsnNadpisItem(docType, "1b");
                 currentCell.Phrase = new Phrase(gr1bText, normal);
                 currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 currentCell.BorderWidth = 1;
@@ -685,9 +725,7 @@ namespace DocGOST
                 currentCell.FixedHeight = 10 * mm_A4;
                 table1.AddCell(currentCell);
                 table1.WriteSelectedRows(1, 2, 85 * mm_A4, 20 * mm_A4, cb);
-                string gr1bText = project.GetOsnNadpisItem("1b").perechenValue;
-                if (docType == DocType.Specification) gr1bText = project.GetOsnNadpisItem("1b").specificationValue;
-                if (docType == DocType.PcbSpecification) gr1bText = project.GetOsnNadpisItem("1b").pcbSpecificationValue;
+                string gr1bText = GetOsnNadpisItem(docType, "1b");
                 currentCell.Phrase = new Phrase(gr1bText, normal);
                 currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 currentCell.EnableBorderSide(Rectangle.BOTTOM_BORDER);
@@ -717,9 +755,7 @@ namespace DocGOST
                 currentCell.FixedHeight = 5 * mm_A4;
                 table1.AddCell(currentCell);
                 table1.WriteSelectedRows(2, 3, 85 * mm_A4, 20 * mm_A4, cb);
-                string gr1bText = project.GetOsnNadpisItem("1b").perechenValue;
-                if (docType == DocType.Specification) gr1bText = project.GetOsnNadpisItem("1b").specificationValue;
-                if (docType == DocType.PcbSpecification) gr1bText = project.GetOsnNadpisItem("1b").pcbSpecificationValue;
+                string gr1bText = GetOsnNadpisItem(docType, "1b");
                 currentCell.Phrase = new Phrase(gr1bText, normal);
                 currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 currentCell.EnableBorderSide(Rectangle.BOTTOM_BORDER);
@@ -737,10 +773,7 @@ namespace DocGOST
 
 
             // Заполнение графы 2:
-            string gr2Text = String.Empty;
-            if (docType == DocType.Specification) gr2Text = project.GetOsnNadpisItem("2").specificationValue;
-            if (docType == DocType.Perechen) gr2Text = project.GetOsnNadpisItem("2").perechenValue;
-            if (docType == DocType.PcbSpecification) gr2Text = project.GetOsnNadpisItem("2").pcbSpecificationValue;
+            string gr2Text = GetOsnNadpisItem(docType, "2");
 
             currentCell = new PdfPCell(new Phrase(gr2Text, veryBig));
             currentCell.BorderWidth = 1;
@@ -796,10 +829,7 @@ namespace DocGOST
             tbldWidths[1] = 5;
             tbldWidths[2] = 5;
             table4.SetWidths(tbldWidths);
-            string gr4aText = String.Empty;
-            if (docType == DocType.Specification) gr4aText = project.GetOsnNadpisItem("4a").specificationValue;
-            if (docType == DocType.Perechen) gr4aText = project.GetOsnNadpisItem("4a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr4aText = project.GetOsnNadpisItem("4a").pcbSpecificationValue;
+            string gr4aText = GetOsnNadpisItem(docType, "4a");
             currentCell = new PdfPCell(new Phrase(gr4aText, normal));
             currentCell.BorderWidth = 0.5f;
             currentCell.HasFixedHeight();
@@ -808,16 +838,10 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
             currentCell.FixedHeight = 5 * mm_A4;
             table4.AddCell(currentCell);
-            string gr4bText = String.Empty;
-            if (docType == DocType.Specification) gr4bText = project.GetOsnNadpisItem("4b").specificationValue;
-            if (docType == DocType.Perechen) gr4bText = project.GetOsnNadpisItem("4b").perechenValue;
-            if (docType == DocType.PcbSpecification) gr4bText = project.GetOsnNadpisItem("4b").pcbSpecificationValue;
+            string gr4bText = GetOsnNadpisItem(docType, "4b");
             currentCell.Phrase = new Phrase(gr4bText, normal);
             table4.AddCell(currentCell);
-            string gr4cText = String.Empty;
-            if (docType == DocType.Specification) gr4cText = project.GetOsnNadpisItem("4c").specificationValue;
-            if (docType == DocType.Perechen) gr4cText = project.GetOsnNadpisItem("4c").perechenValue;
-            if (docType == DocType.PcbSpecification) gr4cText = project.GetOsnNadpisItem("4c").pcbSpecificationValue;
+            string gr4cText = GetOsnNadpisItem(docType, "4c");
             currentCell.Phrase = new Phrase(gr4cText, normal);
             table4.AddCell(currentCell);
             table4.WriteSelectedRows(0, 1, 155 * mm_A4, 25 * mm_A4, cb);
@@ -830,10 +854,7 @@ namespace DocGOST
 
 
             // Заполнение графы 9:
-            string gr9Text = String.Empty;
-            if (docType == DocType.Specification) gr9Text = project.GetOsnNadpisItem("9").specificationValue;
-            if (docType == DocType.Perechen) gr9Text = project.GetOsnNadpisItem("9").perechenValue;
-            if (docType == DocType.PcbSpecification) gr9Text = project.GetOsnNadpisItem("9").pcbSpecificationValue;
+            string gr9Text = GetOsnNadpisItem(docType, "9");
 
             currentCell = new PdfPCell(new Phrase(gr9Text, veryBig));
             currentCell.BorderWidth = 1;
@@ -912,22 +933,13 @@ namespace DocGOST
             table14_18.AddCell(currentCell);
             table14_18.AddCell(currentCell);
             table14_18.WriteSelectedRows(0, 1, 20 * mm_A4, 45 * mm_A4, cb);
-            string gr14aText = String.Empty;
-            if (docType == DocType.Specification) gr14aText = project.GetOsnNadpisItem("14a").specificationValue;
-            if (docType == DocType.Perechen) gr14aText = project.GetOsnNadpisItem("14a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr14aText = project.GetOsnNadpisItem("14a").pcbSpecificationValue;
+            string gr14aText = GetOsnNadpisItem(docType, "14a");
             currentCell.Phrase = new Phrase(gr14aText, normal);
             table14_18.AddCell(currentCell);
-            string gr15aText = String.Empty;
-            if (docType == DocType.Specification) gr15aText = project.GetOsnNadpisItem("15a").specificationValue;
-            if (docType == DocType.Perechen) gr15aText = project.GetOsnNadpisItem("15a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr15aText = project.GetOsnNadpisItem("15a").pcbSpecificationValue;
+            string gr15aText = GetOsnNadpisItem(docType, "15a");
             currentCell.Phrase = new Phrase(gr15aText, normal);
             table14_18.AddCell(currentCell);
-            string gr16aText = String.Empty;
-            if (docType == DocType.Specification) gr16aText = project.GetOsnNadpisItem("16a").specificationValue;
-            if (docType == DocType.Perechen) gr16aText = project.GetOsnNadpisItem("16a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr16aText = project.GetOsnNadpisItem("16a").pcbSpecificationValue;
+            string gr16aText = GetOsnNadpisItem(docType, "16a");
             currentCell.Phrase = new Phrase(gr16aText, normal);
             table14_18.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -954,10 +966,7 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
             currentCell.FixedHeight = 5 * mm_A4;
             table10_13.AddCell(currentCell);
-            string gr11aText = String.Empty;
-            if (docType == DocType.Specification) gr11aText = project.GetOsnNadpisItem("11a").specificationValue;
-            if (docType == DocType.Perechen) gr11aText = project.GetOsnNadpisItem("11a").perechenValue;
-            if (docType == DocType.PcbSpecification) gr11aText = project.GetOsnNadpisItem("11a").pcbSpecificationValue;
+            string gr11aText = GetOsnNadpisItem(docType, "11a");
             currentCell.Phrase = new Phrase(gr11aText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -965,25 +974,16 @@ namespace DocGOST
             table10_13.WriteSelectedRows(0, 1, 20 * mm_A4, 30 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Пров.", normal);
             table10_13.AddCell(currentCell);
-            string gr11bText = String.Empty;
-            if (docType == DocType.Specification) gr11bText = project.GetOsnNadpisItem("11b").specificationValue;
-            if (docType == DocType.Perechen) gr11bText = project.GetOsnNadpisItem("11b").perechenValue;
-            if (docType == DocType.PcbSpecification) gr11bText = project.GetOsnNadpisItem("11b").pcbSpecificationValue;
+            string gr11bText = GetOsnNadpisItem(docType, "11b");
             currentCell.Phrase = new Phrase(gr11bText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
             for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
             table10_13.WriteSelectedRows(1, 2, 20 * mm_A4, 25 * mm_A4, cb);
-            string gr10Text = String.Empty;
-            if (docType == DocType.Specification) gr10Text = project.GetOsnNadpisItem("10").specificationValue;
-            if (docType == DocType.Perechen) gr10Text = project.GetOsnNadpisItem("10").perechenValue;
-            if (docType == DocType.PcbSpecification) gr10Text = project.GetOsnNadpisItem("10").pcbSpecificationValue;
+            string gr10Text = GetOsnNadpisItem(docType, "10");
             currentCell.Phrase = new Phrase(gr10Text, normal);
             table10_13.AddCell(currentCell);
-            string gr11cText = String.Empty;
-            if (docType == DocType.Specification) gr11cText = project.GetOsnNadpisItem("11c").specificationValue;
-            if (docType == DocType.Perechen) gr11cText = project.GetOsnNadpisItem("11c").perechenValue;
-            if (docType == DocType.PcbSpecification) gr11cText = project.GetOsnNadpisItem("11c").pcbSpecificationValue;
+            string gr11cText = GetOsnNadpisItem(docType, "11c");
             currentCell.Phrase = new Phrase(gr11cText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -991,10 +991,7 @@ namespace DocGOST
             table10_13.WriteSelectedRows(2, 3, 20 * mm_A4, 20 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Н. контр.", normal);
             table10_13.AddCell(currentCell);
-            string gr11dText = String.Empty;
-            if (docType == DocType.Specification) gr11dText = project.GetOsnNadpisItem("11d").specificationValue;
-            if (docType == DocType.Perechen) gr11dText = project.GetOsnNadpisItem("11d").perechenValue;
-            if (docType == DocType.PcbSpecification) gr11dText = project.GetOsnNadpisItem("11d").pcbSpecificationValue;
+            string gr11dText = GetOsnNadpisItem(docType, "11d");
             currentCell.Phrase = new Phrase(gr11dText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1002,10 +999,7 @@ namespace DocGOST
             table10_13.WriteSelectedRows(3, 4, 20 * mm_A4, 15 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Утв.", normal);
             table10_13.AddCell(currentCell);
-            string gr11eText = String.Empty;
-            if (docType == DocType.Specification) gr11eText = project.GetOsnNadpisItem("11e").specificationValue;
-            if (docType == DocType.Perechen) gr11eText = project.GetOsnNadpisItem("11e").perechenValue;
-            if (docType == DocType.PcbSpecification) gr11eText = project.GetOsnNadpisItem("11e").pcbSpecificationValue;
+            string gr11eText = GetOsnNadpisItem(docType, "11e");
             currentCell.Phrase = new Phrase(gr11eText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1060,69 +1054,26 @@ namespace DocGOST
         private void DrawFirstPageStampA3(Document doc, PdfWriter wr, int pageNumber, int pagesTotal, DocType docType)
         {
             PdfContentByte cb = wr.DirectContent;
+            PdfPCell currentCell;
 
             float[] tbldWidths;
             float mm_A3 = doc.PageSize.Width / 420;
+            if (custom2425 == null)
+                DrawFirstPageStamp_Fields24_25(cb, docType, mm_A3);
+            else
+                DrawFirstPageStamp_CustomFields24_25(cb, docType, mm_A3);
 
-            #region Рисование табицы с графами 24,25            
-            PdfPTable table24_25 = new PdfPTable(2);
-            table24_25.TotalWidth = 12 * mm_A3;
-            table24_25.LockedWidth = true;
-            tbldWidths = new float[2];
-            tbldWidths[0] = 5;
-            tbldWidths[1] = 7;
-            table24_25.SetWidths(tbldWidths);
-
-            // Заполнение графы 24:
-            PdfPCell currentCell = new PdfPCell(new Phrase("Справ. №", normal));
-            currentCell.BorderWidth = 1;
-            currentCell.Rotation = 90;
-            currentCell.HasFixedHeight();
-            currentCell.Padding = 0;
-            currentCell.VerticalAlignment = Element.ALIGN_CENTER;
-            currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
-            currentCell.FixedHeight = 60 * mm_A3;
-            table24_25.AddCell(currentCell);
-            string gr24Text = String.Empty;
-            if (docType == DocType.Specification) gr24Text = project.GetOsnNadpisItem("24").specificationValue;
-            if (docType == DocType.Perechen) gr24Text = project.GetOsnNadpisItem("24").perechenValue;
-            if (docType == DocType.Vedomost) gr24Text = project.GetOsnNadpisItem("24").vedomostValue;
-            currentCell.Phrase = new Phrase(gr24Text, normal);
-            currentCell.PaddingLeft = 2;
-            table24_25.AddCell(currentCell);
-            table24_25.WriteSelectedRows(0, 1, 8 * mm_A3, 232 * mm_A3, cb);
-            // Заполнение графы 25:
-            currentCell.Phrase = new Phrase("Перв. примен.", normal);
-            currentCell.PaddingLeft = 0;
-            currentCell.FixedHeight = 60 * mm_A3;
-            table24_25.AddCell(currentCell);
-            string gr25Text = String.Empty;
-            if (docType == DocType.Specification) gr25Text = project.GetOsnNadpisItem("25").specificationValue;
-            if (docType == DocType.Perechen) gr25Text = project.GetOsnNadpisItem("25").perechenValue;
-            if (docType == DocType.Vedomost) gr25Text = project.GetOsnNadpisItem("25").vedomostValue;
-            currentCell.Phrase = new Phrase(gr25Text, normal);
-            currentCell.PaddingLeft = 2;
-            table24_25.AddCell(currentCell);
-            table24_25.WriteSelectedRows(1, 2, 8 * mm_A3, 292 * mm_A3, cb);
-
-            #endregion
             #region Рисование графы 1           
             PdfPTable table1 = new PdfPTable(1);
             table1.TotalWidth = 70 * mm_A3;
             table1.LockedWidth = true;
 
-            
-
             //Определяем, сколько строчек нужно для наименования изделия:
-
             int kolvoStrGg1 = 2;
             int naimenovaieMaxLength = 25;
             string[] naimenovanieStr = new string[kolvoStrGg1];
             for (int i = 0; i < kolvoStrGg1; i++) naimenovanieStr[i] = String.Empty;
-            string gr1aText = String.Empty;
-            if (docType == DocType.Specification) gr1aText = project.GetOsnNadpisItem("1a").specificationValue;
-            if (docType == DocType.Perechen) gr1aText = project.GetOsnNadpisItem("1a").perechenValue;
-            if (docType == DocType.Vedomost) gr1aText = project.GetOsnNadpisItem("1a").vedomostValue;
+            string gr1aText = GetOsnNadpisItem(docType, "1a");
 
             if (gr1aText.Length > naimenovaieMaxLength)
             {
@@ -1154,9 +1105,7 @@ namespace DocGOST
                 currentCell.FixedHeight = 18 * mm_A3;
                 table1.AddCell(currentCell);
                 table1.WriteSelectedRows(0, 1, 295 * mm_A3, 30 * mm_A3, cb);
-                string gr1bText = project.GetOsnNadpisItem("1b").perechenValue;
-                if (docType == DocType.Specification) gr1bText = project.GetOsnNadpisItem("1b").specificationValue;
-                if (docType == DocType.Vedomost) gr1bText = project.GetOsnNadpisItem("1b").vedomostValue;
+                string gr1bText = GetOsnNadpisItem(docType, "1b");
                 currentCell.Phrase = new Phrase(gr1bText, normal);
                 currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 currentCell.BorderWidth = 1;
@@ -1182,9 +1131,7 @@ namespace DocGOST
                 currentCell.FixedHeight = 10 * mm_A3;
                 table1.AddCell(currentCell);
                 table1.WriteSelectedRows(1, 2, 295 * mm_A3, 20 * mm_A3, cb);
-                string gr1bText = project.GetOsnNadpisItem("1b").perechenValue;
-                if (docType == DocType.Specification) gr1bText = project.GetOsnNadpisItem("1b").specificationValue;
-                if (docType == DocType.Vedomost) gr1bText = project.GetOsnNadpisItem("1b").vedomostValue;
+                string gr1bText = GetOsnNadpisItem(docType, "1b");
                 currentCell.Phrase = new Phrase(gr1bText, normal);
                 currentCell.VerticalAlignment = Element.ALIGN_MIDDLE;
                 currentCell.EnableBorderSide(Rectangle.BOTTOM_BORDER);
@@ -1202,10 +1149,7 @@ namespace DocGOST
 
 
             // Заполнение графы 2:
-            string gr2Text = String.Empty;
-            if (docType == DocType.Specification) gr2Text = project.GetOsnNadpisItem("2").specificationValue;
-            if (docType == DocType.Perechen) gr2Text = project.GetOsnNadpisItem("2").perechenValue;
-            if (docType == DocType.Vedomost) gr2Text = project.GetOsnNadpisItem("2").vedomostValue;
+            string gr2Text = GetOsnNadpisItem(docType, "2");
 
             currentCell = new PdfPCell(new Phrase(gr2Text, veryBig));
             currentCell.BorderWidth = 1;
@@ -1261,10 +1205,7 @@ namespace DocGOST
             tbldWidths[1] = 5;
             tbldWidths[2] = 5;
             table4.SetWidths(tbldWidths);
-            string gr4aText = String.Empty;
-            if (docType == DocType.Specification) gr4aText = project.GetOsnNadpisItem("4a").specificationValue;
-            if (docType == DocType.Perechen) gr4aText = project.GetOsnNadpisItem("4a").perechenValue;
-            if (docType == DocType.Vedomost) gr4aText = project.GetOsnNadpisItem("4a").vedomostValue;
+            string gr4aText = GetOsnNadpisItem(docType, "4a");
             currentCell = new PdfPCell(new Phrase(gr4aText, normal));
             currentCell.BorderWidth = 0.5f;
             currentCell.HasFixedHeight();
@@ -1273,16 +1214,10 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_CENTER;
             currentCell.FixedHeight = 5 * mm_A3;
             table4.AddCell(currentCell);
-            string gr4bText = String.Empty;
-            if (docType == DocType.Specification) gr4bText = project.GetOsnNadpisItem("4b").specificationValue;
-            if (docType == DocType.Perechen) gr4bText = project.GetOsnNadpisItem("4b").perechenValue;
-            if (docType == DocType.Vedomost) gr4bText = project.GetOsnNadpisItem("4b").vedomostValue;
+            string gr4bText = GetOsnNadpisItem(docType, "4b");
             currentCell.Phrase = new Phrase(gr4bText, normal);
             table4.AddCell(currentCell);
-            string gr4cText = String.Empty;
-            if (docType == DocType.Specification) gr4cText = project.GetOsnNadpisItem("4c").specificationValue;
-            if (docType == DocType.Perechen) gr4cText = project.GetOsnNadpisItem("4c").perechenValue;
-            if (docType == DocType.Vedomost) gr4cText = project.GetOsnNadpisItem("4c").vedomostValue;
+            string gr4cText = GetOsnNadpisItem(docType, "4c");
             currentCell.Phrase = new Phrase(gr4cText, normal);
             table4.AddCell(currentCell);
             table4.WriteSelectedRows(0, 1, 365 * mm_A3, 25 * mm_A3, cb);
@@ -1295,10 +1230,7 @@ namespace DocGOST
 
 
             // Заполнение графы 9:
-            string gr9Text = String.Empty;
-            if (docType == DocType.Specification) gr9Text = project.GetOsnNadpisItem("9").specificationValue;
-            if (docType == DocType.Perechen) gr9Text = project.GetOsnNadpisItem("9").perechenValue;
-            if (docType == DocType.Vedomost) gr9Text = project.GetOsnNadpisItem("9").vedomostValue;
+            string gr9Text = GetOsnNadpisItem(docType, "9");
 
             currentCell = new PdfPCell(new Phrase(gr9Text, veryBig));
             currentCell.BorderWidth = 1;
@@ -1377,22 +1309,13 @@ namespace DocGOST
             table14_18.AddCell(currentCell);
             table14_18.AddCell(currentCell);
             table14_18.WriteSelectedRows(0, 1, 230 * mm_A3, 45 * mm_A3, cb);
-            string gr14aText = String.Empty;
-            if (docType == DocType.Specification) gr14aText = project.GetOsnNadpisItem("14a").specificationValue;
-            if (docType == DocType.Perechen) gr14aText = project.GetOsnNadpisItem("14a").perechenValue;
-            if (docType == DocType.Vedomost) gr14aText = project.GetOsnNadpisItem("14a").vedomostValue;
+            string gr14aText = GetOsnNadpisItem(docType, "14a");
             currentCell.Phrase = new Phrase(gr14aText, normal);
             table14_18.AddCell(currentCell);
-            string gr15aText = String.Empty;
-            if (docType == DocType.Specification) gr15aText = project.GetOsnNadpisItem("15a").specificationValue;
-            if (docType == DocType.Perechen) gr15aText = project.GetOsnNadpisItem("15a").perechenValue;
-            if (docType == DocType.Vedomost) gr15aText = project.GetOsnNadpisItem("15a").vedomostValue;
+            string gr15aText = GetOsnNadpisItem(docType, "15a");
             currentCell.Phrase = new Phrase(gr15aText, normal);
             table14_18.AddCell(currentCell);
-            string gr16aText = String.Empty;
-            if (docType == DocType.Specification) gr16aText = project.GetOsnNadpisItem("16a").specificationValue;
-            if (docType == DocType.Perechen) gr16aText = project.GetOsnNadpisItem("16a").perechenValue;
-            if (docType == DocType.Vedomost) gr16aText = project.GetOsnNadpisItem("16a").vedomostValue;
+            string gr16aText = GetOsnNadpisItem(docType, "16a");
             currentCell.Phrase = new Phrase(gr16aText, normal);
             table14_18.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1419,10 +1342,7 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
             currentCell.FixedHeight = 5 * mm_A3;
             table10_13.AddCell(currentCell);
-            string gr11aText = String.Empty;
-            if (docType == DocType.Specification) gr11aText = project.GetOsnNadpisItem("11a").specificationValue;
-            if (docType == DocType.Perechen) gr11aText = project.GetOsnNadpisItem("11a").perechenValue;
-            if (docType == DocType.Vedomost) gr11aText = project.GetOsnNadpisItem("11a").vedomostValue;
+            string gr11aText = GetOsnNadpisItem(docType, "11a");
             currentCell.Phrase = new Phrase(gr11aText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1430,25 +1350,16 @@ namespace DocGOST
             table10_13.WriteSelectedRows(0, 1, 230 * mm_A3, 30 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Пров.", normal);
             table10_13.AddCell(currentCell);
-            string gr11bText = String.Empty;
-            if (docType == DocType.Specification) gr11bText = project.GetOsnNadpisItem("11b").specificationValue;
-            if (docType == DocType.Perechen) gr11bText = project.GetOsnNadpisItem("11b").perechenValue;
-            if (docType == DocType.Vedomost) gr11bText = project.GetOsnNadpisItem("11b").vedomostValue;
+            string gr11bText = GetOsnNadpisItem(docType, "11b");
             currentCell.Phrase = new Phrase(gr11bText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
             for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
             table10_13.WriteSelectedRows(1, 2, 230 * mm_A3, 25 * mm_A3, cb);
-            string gr10Text = String.Empty;
-            if (docType == DocType.Specification) gr10Text = project.GetOsnNadpisItem("10").specificationValue;
-            if (docType == DocType.Perechen) gr10Text = project.GetOsnNadpisItem("10").perechenValue;
-            if (docType == DocType.Vedomost) gr10Text = project.GetOsnNadpisItem("10").vedomostValue;
+            string gr10Text = GetOsnNadpisItem(docType, "10");
             currentCell.Phrase = new Phrase(gr10Text, normal);
             table10_13.AddCell(currentCell);
-            string gr11cText = String.Empty;
-            if (docType == DocType.Specification) gr11cText = project.GetOsnNadpisItem("11c").specificationValue;
-            if (docType == DocType.Perechen) gr11cText = project.GetOsnNadpisItem("11c").perechenValue;
-            if (docType == DocType.Vedomost) gr11cText = project.GetOsnNadpisItem("11c").vedomostValue;
+            string gr11cText = GetOsnNadpisItem(docType, "11c");
             currentCell.Phrase = new Phrase(gr11cText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1456,10 +1367,7 @@ namespace DocGOST
             table10_13.WriteSelectedRows(2, 3, 230 * mm_A3, 20 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Н. контр.", normal);
             table10_13.AddCell(currentCell);
-            string gr11dText = String.Empty;
-            if (docType == DocType.Specification) gr11dText = project.GetOsnNadpisItem("11d").specificationValue;
-            if (docType == DocType.Perechen) gr11dText = project.GetOsnNadpisItem("11d").perechenValue;
-            if (docType == DocType.Vedomost) gr11dText = project.GetOsnNadpisItem("11d").vedomostValue;
+            string gr11dText = GetOsnNadpisItem(docType, "11d");
             currentCell.Phrase = new Phrase(gr11dText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1467,10 +1375,7 @@ namespace DocGOST
             table10_13.WriteSelectedRows(3, 4, 230 * mm_A3, 15 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Утв.", normal);
             table10_13.AddCell(currentCell);
-            string gr11eText = String.Empty;
-            if (docType == DocType.Specification) gr11eText = project.GetOsnNadpisItem("11e").specificationValue;
-            if (docType == DocType.Perechen) gr11eText = project.GetOsnNadpisItem("11e").perechenValue;
-            if (docType == DocType.Vedomost) gr11eText = project.GetOsnNadpisItem("11e").vedomostValue;
+            string gr11eText = GetOsnNadpisItem(docType, "11e");
             currentCell.Phrase = new Phrase(gr11eText, normal);
             table10_13.AddCell(currentCell);
             currentCell.Phrase = new Phrase(String.Empty, normal);
@@ -1537,10 +1442,7 @@ namespace DocGOST
 
 
             // Заполнение графы 2:
-            string gr2Text = String.Empty;
-            if (docType == DocType.Specification) gr2Text = project.GetOsnNadpisItem("2").specificationValue;
-            else if (docType == DocType.Perechen) gr2Text = project.GetOsnNadpisItem("2").perechenValue;
-            else if (docType == DocType.Vedomost) gr2Text = project.GetOsnNadpisItem("2").vedomostValue;
+            string gr2Text = GetOsnNadpisItem(docType, "2");
             PdfPCell currentCell = new PdfPCell(new Phrase(gr2Text, veryBig));
             currentCell.BorderWidth = 1;
             currentCell.HasFixedHeight();
@@ -1652,10 +1554,7 @@ namespace DocGOST
 
 
             // Заполнение графы 2:
-            string gr2Text = String.Empty;
-            if (docType == DocType.Specification) gr2Text = project.GetOsnNadpisItem("2").specificationValue;
-            else if (docType == DocType.Perechen) gr2Text = project.GetOsnNadpisItem("2").perechenValue;
-            else if (docType == DocType.Vedomost) gr2Text = project.GetOsnNadpisItem("2").vedomostValue;
+            string gr2Text = GetOsnNadpisItem(docType, "2");
             PdfPCell currentCell = new PdfPCell(new Phrase(gr2Text, veryBig));
             currentCell.BorderWidth = 1;
             currentCell.HasFixedHeight();

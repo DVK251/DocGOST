@@ -2489,7 +2489,7 @@ namespace DocGOST
                                 if (SA[0] == "" || SA[1] == "") continue;
                                 subst_map.Add(SA[0], (SA[1], SA[2], SA[3]));
                             }
-                            } catch (Exception ex) {
+                        } catch (Exception ex) {
                             throw new Exception(dataFile.MakeExceptionString(ex.Message));
                         }
                     }
@@ -3309,7 +3309,33 @@ namespace DocGOST
         /// <summary> Создание PDF-файлов перечня и спецификации </summary>
         private void CreatePdf_Click(object sender, RoutedEventArgs e)
         {
-            try { 
+            try {
+                Custom_24_25 custom_2425 = null;
+                var fn = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Settings", "_custom2425.csv");
+                if (File.Exists(fn)) {
+                    custom_2425 = new Custom_24_25();
+                    using (var dataFile = new CsvReader(fn, '\t')) {
+                        try {
+                            string[] SA = dataFile.ReadLineAsStrings(-1, true); // table header
+                            int LINE_CNT = SA.Length;
+                            if (LINE_CNT <= 2 || (LINE_CNT - 2) % 3 != 0)
+                                throw new Exception("Неверное число колонок в заголовке");
+                            while (!dataFile.Eof()) {
+                                SA = dataFile.ReadLineAsStrings(LINE_CNT, true);
+                                var ypos = SA[0].ToFloat32(0, 999);
+                                var height = SA[1].ToFloat32(0, 999);
+                                var cells = new List <(float widths_mm, string text, bool is_align_center)>();
+                                var CELL_CNT = (LINE_CNT - 2) / 3;
+                                for (int i = 0; i < CELL_CNT; i++) 
+                                    cells.Add( (SA[2 + i*3 + 0].ToFloat32(0, 999), SA[2 + i*3 + 1], SA[2 + i*3 + 2].ToUpper() == "C") );
+                                custom_2425.Add((ypos, height, cells));
+                            }
+                        } catch (Exception ex) {
+                            throw new Exception(dataFile.MakeExceptionString(ex.Message));
+                        }
+                    }
+                }
+
                 if (chkExportPerechen.IsChecked == false && chkExportSpec.IsChecked == false && chkExportVedomost.IsChecked == false) { 
                     ShowError("Нужно выбрать хотя бы один вариант вывода");
                     return;
@@ -3320,21 +3346,21 @@ namespace DocGOST
 
                 if (chkExportPerechen.IsChecked == true) { 
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ПЭ.pdf";
-                    using (var pdf = new PdfOperations(projectPath))
+                    using (var pdf = new PdfOperations(projectPath, custom_2425))
                         pdf.CreatePerechen(pdfPath, startPage, addListRegistr, perTempSave.GetCurrent());
                     if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                 }
 
                 if (chkExportSpec.IsChecked == true) {
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация.pdf";
-                    using (var pdf = new PdfOperations(projectPath))
+                    using (var pdf = new PdfOperations(projectPath, custom_2425))
                         pdf.CreateSpecification(pdfPath, startPage, addListRegistr, specTempSave.GetCurrent());
                     if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
 
                     if (isPcbMultilayer == true) // если плата - сборочная единица
                     {
                         pdfPath = Path.ChangeExtension(projectPath, null) + " " + "Спецификация ПП.pdf";
-                        using (var pdf = new PdfOperations(projectPath))
+                        using (var pdf = new PdfOperations(projectPath, custom_2425))
                             pdf.CreatePcbSpecification(pdfPath, startPage, addListRegistr, pcbSpecTempSave.GetCurrent());
                         if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     }
@@ -3342,7 +3368,7 @@ namespace DocGOST
 
                 if (chkExportVedomost.IsChecked == true) {
                     var pdfPath = Path.ChangeExtension(projectPath, null) + " " + "ВП.pdf";
-                    using (var pdf = new PdfOperations(projectPath)) 
+                    using (var pdf = new PdfOperations(projectPath, custom_2425)) 
                         pdf.CreateVedomost(pdfPath, startPage, addListRegistr, vedomostTempSave.GetCurrent());
                     if (!bSilentMode) System.Diagnostics.Process.Start(pdfPath); //открываем pdf файл
                     CreateVedomostCsv(Path.ChangeExtension(projectPath, null) + " " + "ВП.csv", vedomostTempSave.GetCurrent());
