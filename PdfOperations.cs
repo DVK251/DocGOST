@@ -45,7 +45,7 @@ namespace DocGOST
         public const float VEDOMOST_NORMAL_FONT_SZ = 12f;
 
         static BaseFont fontGostA = BaseFont.CreateFont("Resources\\GOST_A.TTF", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-        Font normal, big, veryBig;
+        Font normal, big, veryBig, small;
         ProjectDB project;
         Custom_24_25 custom2425;
 
@@ -60,6 +60,7 @@ namespace DocGOST
         public PdfOperations(string projectPath, Custom_24_25 custom2425)
         {
             normal = new Font(fontGostA, 11f, Font.ITALIC, BaseColor.BLACK);
+            small = new Font(fontGostA, 10f, Font.ITALIC, BaseColor.BLACK);
             big = new Font(fontGostA, 18f, Font.ITALIC, BaseColor.BLACK);
             veryBig = new Font(fontGostA, 22f, Font.ITALIC, BaseColor.BLACK);
 
@@ -614,7 +615,7 @@ namespace DocGOST
                 table.SetWidths(widths);
                 foreach (var cell in row.cells) { 
                     string text = cell.text;
-                    if (text.StartsWith("{{") && text.EndsWith("}}")) { // _DDD check
+                    if (text.StartsWith("{{") && text.EndsWith("}}")) { 
                         text = GetOsnNadpisItem(docType, text.Substring(2, text.Length - 4));
                     }
                     PdfPCell currentCell = new PdfPCell(new Phrase(text, normal));
@@ -623,7 +624,7 @@ namespace DocGOST
                     currentCell.HasFixedHeight();
                     currentCell.Padding = 0;
                     currentCell.PaddingBottom = 1 * mm_mult;
-                    currentCell.VerticalAlignment = Element.ALIGN_CENTER; // _DDD check
+                    currentCell.VerticalAlignment = Element.ALIGN_CENTER; 
                     currentCell.HorizontalAlignment = cell.is_align_center ? Element.ALIGN_CENTER : Element.ALIGN_LEFT;
                     currentCell.FixedHeight = row.Height * mm_mult;
                     table.AddCell(currentCell);
@@ -966,19 +967,30 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
             currentCell.FixedHeight = 5 * mm_A4;
             table10_13.AddCell(currentCell);
+
+            var dataCell = new PdfPCell(currentCell);
+            dataCell.PaddingLeft = 0;
+            dataCell.Phrase = new Phrase(GetOsnNadpisItem(docType, "13"), small);
+            void AddSignAndDateIfNE(string name) {
+                currentCell.Phrase = new Phrase(String.Empty, normal);
+                table10_13.AddCell(currentCell);
+                if (string.IsNullOrEmpty(name)) 
+                    table10_13.AddCell(currentCell);
+                else
+                    table10_13.AddCell(dataCell);
+            }
+
             string gr11aText = GetOsnNadpisItem(docType, "11a");
             currentCell.Phrase = new Phrase(gr11aText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11aText);
             table10_13.WriteSelectedRows(0, 1, 20 * mm_A4, 30 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Пров.", normal);
             table10_13.AddCell(currentCell);
             string gr11bText = GetOsnNadpisItem(docType, "11b");
             currentCell.Phrase = new Phrase(gr11bText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11bText);
             table10_13.WriteSelectedRows(1, 2, 20 * mm_A4, 25 * mm_A4, cb);
             string gr10Text = GetOsnNadpisItem(docType, "10");
             currentCell.Phrase = new Phrase(gr10Text, normal);
@@ -986,24 +998,21 @@ namespace DocGOST
             string gr11cText = GetOsnNadpisItem(docType, "11c");
             currentCell.Phrase = new Phrase(gr11cText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11cText);
             table10_13.WriteSelectedRows(2, 3, 20 * mm_A4, 20 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Н. контр.", normal);
             table10_13.AddCell(currentCell);
             string gr11dText = GetOsnNadpisItem(docType, "11d");
             currentCell.Phrase = new Phrase(gr11dText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11dText);
             table10_13.WriteSelectedRows(3, 4, 20 * mm_A4, 15 * mm_A4, cb);
             currentCell.Phrase = new Phrase("Утв.", normal);
             table10_13.AddCell(currentCell);
             string gr11eText = GetOsnNadpisItem(docType, "11e");
             currentCell.Phrase = new Phrase(gr11eText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11eText);
             table10_13.WriteSelectedRows(4, 5, 20 * mm_A4, 10 * mm_A4, cb);
 
 
@@ -1342,19 +1351,30 @@ namespace DocGOST
             currentCell.HorizontalAlignment = Element.ALIGN_LEFT;
             currentCell.FixedHeight = 5 * mm_A3;
             table10_13.AddCell(currentCell);
+
+            var dataCell = new PdfPCell(currentCell);
+            dataCell.PaddingLeft = 0;
+            dataCell.Phrase = new Phrase(GetOsnNadpisItem(docType, "13"), small);
+            void AddSignAndDateIfNE(string name) {
+                currentCell.Phrase = new Phrase(String.Empty, normal);
+                table10_13.AddCell(currentCell);
+                if (string.IsNullOrEmpty(name))
+                    table10_13.AddCell(currentCell);
+                else
+                    table10_13.AddCell(dataCell);
+            }
+
             string gr11aText = GetOsnNadpisItem(docType, "11a");
             currentCell.Phrase = new Phrase(gr11aText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11aText);
             table10_13.WriteSelectedRows(0, 1, 230 * mm_A3, 30 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Пров.", normal);
             table10_13.AddCell(currentCell);
             string gr11bText = GetOsnNadpisItem(docType, "11b");
             currentCell.Phrase = new Phrase(gr11bText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11bText);
             table10_13.WriteSelectedRows(1, 2, 230 * mm_A3, 25 * mm_A3, cb);
             string gr10Text = GetOsnNadpisItem(docType, "10");
             currentCell.Phrase = new Phrase(gr10Text, normal);
@@ -1362,24 +1382,21 @@ namespace DocGOST
             string gr11cText = GetOsnNadpisItem(docType, "11c");
             currentCell.Phrase = new Phrase(gr11cText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11cText);
             table10_13.WriteSelectedRows(2, 3, 230 * mm_A3, 20 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Н. контр.", normal);
             table10_13.AddCell(currentCell);
             string gr11dText = GetOsnNadpisItem(docType, "11d");
             currentCell.Phrase = new Phrase(gr11dText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11dText);
             table10_13.WriteSelectedRows(3, 4, 230 * mm_A3, 15 * mm_A3, cb);
             currentCell.Phrase = new Phrase("Утв.", normal);
             table10_13.AddCell(currentCell);
             string gr11eText = GetOsnNadpisItem(docType, "11e");
             currentCell.Phrase = new Phrase(gr11eText, normal);
             table10_13.AddCell(currentCell);
-            currentCell.Phrase = new Phrase(String.Empty, normal);
-            for (int i = 0; i < 2; i++) table10_13.AddCell(currentCell);
+            AddSignAndDateIfNE(gr11eText);
             table10_13.WriteSelectedRows(4, 5, 230 * mm_A3, 10 * mm_A3, cb);
 
 

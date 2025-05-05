@@ -104,6 +104,7 @@ namespace DocGOST
             { 
                 string importfn = "";
                 string exportmode = "";
+                string signDate = "";
                 bool bExit = false;
                 var SA = System.Environment.GetCommandLineArgs();
                 for (int i = 1; i < SA.Length; i++) { // skip 1st param
@@ -112,12 +113,14 @@ namespace DocGOST
                         importfn = s.Substring(8);
                     else if (s.StartsWith("/EXPORT=", StringComparison.CurrentCultureIgnoreCase))
                         exportmode = s.Substring(8);
+                    else if (s.StartsWith("/DATE=", StringComparison.CurrentCultureIgnoreCase))
+                        signDate = s.Substring(6);
                     else if (s.Equals("/EXIT", StringComparison.CurrentCultureIgnoreCase))
                         bExit = true;
                 }
                 if (importfn != "") {
                     bSilentMode = true;
-                    ImportPrjfromMentor(importfn); 
+                    ImportPrjfromMentor(importfn, signDate); 
                     exportmode = exportmode.ToUpper();
                     if (exportmode != "") {
                         if (exportmode.Contains("P")) chkExportPerechen.IsChecked = true;
@@ -2284,24 +2287,24 @@ namespace DocGOST
             waitGrid.Visibility = Visibility.Visible;
             try { 
                 if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
-                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName);
+                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName, "");
             } finally {
                 waitGrid.Visibility = Visibility.Hidden;
             }
         }
 
-        void ImportPrjfromMentor(string pcbPrjFile) {
+        void ImportPrjfromMentor(string pcbPrjFile, string SignDate) {
             try {
                 string fn;
                 fn = Path.ChangeExtension(pcbPrjFile, ".docGOST");
                 CreateProject(fn);
-                ImportPrjfromMentorCsv(pcbPrjFile);
+                ImportPrjfromMentorCsv(pcbPrjFile, SignDate);
             } catch (Exception ex) {
                 ShowError(ex.Message);
             }
         }
 
-        private void ImportPrjfromMentorCsv(string pcbPrjFile) {
+        private void ImportPrjfromMentorCsv(string pcbPrjFile, string SignDate) {
             const int HDR_LINE_CNT = 13;
             const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
             const int HDR_IDX_SCH_NAME = 2; // Имя схемы
@@ -2678,6 +2681,13 @@ namespace DocGOST
                     pcbSpecificationValue = HeaderInfo[HDR_IDX_NORMOKONTROL]
                 });
 
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "13",
+                    specificationValue = SignDate,
+                    perechenValue = SignDate,
+                    vedomostValue = SignDate,
+                    pcbSpecificationValue = SignDate
+                });
             } finally {
                 project.Commit();
             }

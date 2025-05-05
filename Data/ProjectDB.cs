@@ -460,7 +460,7 @@ namespace DocGOST.Data
             osnNadpisItem.grapha = "9";
             SaveOsnNadpisItem(osnNadpisItem);
             osnNadpisItem.grapha = "10";
-            osnNadpisItem.perechenValue = "Согл.";
+            osnNadpisItem.perechenValue = "";
             osnNadpisItem.specificationValue = osnNadpisItem.perechenValue;
             osnNadpisItem.vedomostValue = osnNadpisItem.perechenValue;
             osnNadpisItem.pcbSpecificationValue = osnNadpisItem.perechenValue;
@@ -478,6 +478,8 @@ namespace DocGOST.Data
             osnNadpisItem.grapha = "11d";
             SaveOsnNadpisItem(osnNadpisItem);
             osnNadpisItem.grapha = "11e";
+            SaveOsnNadpisItem(osnNadpisItem);
+            osnNadpisItem.grapha = "13";
             SaveOsnNadpisItem(osnNadpisItem);
             osnNadpisItem.grapha = "14a";
             SaveOsnNadpisItem(osnNadpisItem);

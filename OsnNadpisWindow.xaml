@@ -117,15 +117,18 @@
                         <Label Grid.Row="18" Grid.Column="0" Content="11д" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7,29,7" Width="30" />
                         <Label Grid.Row="18" Grid.Column="1" x:Name="gr11eLabel" Content="Фамилия утв." HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBox Grid.Row="18" Grid.Column="2" x:Name="gr11eTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
-                        <Label Grid.Row="19" Grid.Column="0" Content="14а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
-                        <Label Grid.Row="19" Grid.Column="1" x:Name="gr14aLabel" Content="Порядковый номер изм." HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBox Grid.Row="19" Grid.Column="2" x:Name="gr14aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
-                        <Label Grid.Row="20" Grid.Column="0" Content="15а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
-                        <Label Grid.Row="20" Grid.Column="1" x:Name="gr15aLabel" Content="Лист (нов., зам.)" HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBox Grid.Row="20" Grid.Column="2" x:Name="gr15aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
-                        <Label Grid.Row="21" Grid.Column="0" Content="16а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
-                        <Label Grid.Row="21" Grid.Column="1" x:Name="gr16aLabel" Content="Обозначение ИИ" HorizontalAlignment="Right" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBox Grid.Row="21" Grid.Column="2" x:Name="gr16aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
+                        <Label Grid.Row="19" Grid.Column="0" Content="13" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="33,7" Width="23" />
+                        <Label Grid.Row="19" Grid.Column="1" x:Name="gr13Label" Content="Дата (справа от подписи)" HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Grid.Row="19" Grid.Column="2" x:Name="gr13TextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6"/>
+                        <Label Grid.Row="20" Grid.Column="0" Content="14а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
+                        <Label Grid.Row="20" Grid.Column="1" x:Name="gr14aLabel" Content="Порядковый номер изм." HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Grid.Row="20" Grid.Column="2" x:Name="gr14aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
+                        <Label Grid.Row="21" Grid.Column="0" Content="15а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
+                        <Label Grid.Row="21" Grid.Column="1" x:Name="gr15aLabel" Content="Лист (нов., зам.)" HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Grid.Row="21" Grid.Column="2" x:Name="gr15aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
+                        <Label Grid.Row="22" Grid.Column="0" Content="16а" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="30,7" Width="29" />
+                        <Label Grid.Row="22" Grid.Column="1" x:Name="gr16aLabel" Content="Обозначение ИИ" HorizontalAlignment="Right" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Grid.Row="22" Grid.Column="2" x:Name="gr16aTextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
                         <Label Grid.Row="25" Grid.Column="0" Content="24" HorizontalAlignment="Center" Height="24"  VerticalAlignment="Center" Margin="33,7" Width="23" />
                         <Label Grid.Row="25" Grid.Column="1" x:Name="gr24Label" Content="Справ. номер" HorizontalAlignment="Right" Height="24"  VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBox Grid.Row="25" Grid.Column="2" x:Name="gr24TextBox" Height="26" TextWrapping="Wrap" Text="" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="6"/>
