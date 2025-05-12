@@ -30,7 +30,6 @@ using DocGOST.Data;
 using DocGOST.Utils;
 using System.Diagnostics;
 using static DocGOST.Global;
-using System.Data.Entity.Core.Metadata.Edm;
 
 
 namespace DocGOST
@@ -101,26 +100,32 @@ namespace DocGOST
             closeBinding.Executed += ExitMenuItem_Click;
             this.CommandBindings.Add(closeBinding);
 
-            { 
+            try { 
+                bool ReadParamIfName(string arg, string name, ref string value) {
+                    bool rslt = arg.StartsWith("/" + name + "=", StringComparison.CurrentCultureIgnoreCase);
+                    if (rslt)
+                        value = arg.Substring(name.Length + 2);
+                    return rslt;
+                }
+
                 string importfn = "";
                 string exportmode = "";
                 string signDate = "";
-                bool bExit = false;
+                string orgname = "";
+                string bExit = "";
                 var SA = System.Environment.GetCommandLineArgs();
                 for (int i = 1; i < SA.Length; i++) { // skip 1st param
-                    string s = SA[i];
-                    if (s.StartsWith("/IMPORT=", StringComparison.CurrentCultureIgnoreCase))
-                        importfn = s.Substring(8);
-                    else if (s.StartsWith("/EXPORT=", StringComparison.CurrentCultureIgnoreCase))
-                        exportmode = s.Substring(8);
-                    else if (s.StartsWith("/DATE=", StringComparison.CurrentCultureIgnoreCase))
-                        signDate = s.Substring(6);
-                    else if (s.Equals("/EXIT", StringComparison.CurrentCultureIgnoreCase))
-                        bExit = true;
+                    string arg = SA[i];
+                    if (ReadParamIfName(arg, "import", ref importfn)) continue;
+                    if (ReadParamIfName(arg, "export", ref exportmode)) continue;
+                    if (ReadParamIfName(arg, "date", ref signDate)) continue;
+                    if (ReadParamIfName(arg, "orgname", ref orgname)) continue;
+                    if (ReadParamIfName(arg, "exit", ref bExit)) continue;
+                    throw new Exception($"Неверный аргумент '{arg}'");
                 }
                 if (importfn != "") {
                     bSilentMode = true;
-                    ImportPrjfromMentor(importfn, signDate); 
+                    ImportPrjfromMentor(importfn, signDate, orgname); 
                     exportmode = exportmode.ToUpper();
                     if (exportmode != "") {
                         if (exportmode.Contains("P")) chkExportPerechen.IsChecked = true;
@@ -128,8 +133,10 @@ namespace DocGOST
                         if (exportmode.Contains("V")) chkExportVedomost.IsChecked = true;
                         CreatePdf_Click(null, null);
                     }
-                    if (bExit) Close();
+                    if (bExit != "") Close();
                 }
+            } catch (Exception ex) {
+                MessageBox.Show("Ошибка при анализе командной строки. " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2287,24 +2294,24 @@ namespace DocGOST
             waitGrid.Visibility = Visibility.Visible;
             try { 
                 if (ImportPrjfromMentor_openDlg.ShowDialog() == false) return;
-                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName, "");
+                ImportPrjfromMentor(ImportPrjfromMentor_openDlg.FileName, "", "");
             } finally {
                 waitGrid.Visibility = Visibility.Hidden;
             }
         }
 
-        void ImportPrjfromMentor(string pcbPrjFile, string SignDate) {
+        void ImportPrjfromMentor(string pcbPrjFile, string SignDate, string OrgName) {
             try {
                 string fn;
                 fn = Path.ChangeExtension(pcbPrjFile, ".docGOST");
                 CreateProject(fn);
-                ImportPrjfromMentorCsv(pcbPrjFile, SignDate);
+                ImportPrjfromMentorCsv(pcbPrjFile, SignDate, OrgName);
             } catch (Exception ex) {
                 ShowError(ex.Message);
             }
         }
 
-        private void ImportPrjfromMentorCsv(string pcbPrjFile, string SignDate) {
+        private void ImportPrjfromMentorCsv(string pcbPrjFile, string SignDate, string OrgName) {
             const int HDR_LINE_CNT = 13;
             const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
             const int HDR_IDX_SCH_NAME = 2; // Имя схемы
@@ -2650,6 +2657,14 @@ namespace DocGOST
                 });
 
                 project.SaveOsnNadpisItem(new OsnNadpisItem() {
+                    grapha = "9",
+                    specificationValue = OrgName,
+                    perechenValue = OrgName,
+                    vedomostValue = OrgName,
+                    pcbSpecificationValue = OrgName
+                });
+
+                project.SaveOsnNadpisItem(new OsnNadpisItem() {
                     grapha = "11a",
                     specificationValue = HeaderInfo[HDR_IDX_ISPOLNITEL],
                     perechenValue = HeaderInfo[HDR_IDX_ISPOLNITEL],
@@ -2688,6 +2703,7 @@ namespace DocGOST
                     vedomostValue = SignDate,
                     pcbSpecificationValue = SignDate
                 });
+
             } finally {
                 project.Commit();
             }
