@@ -2343,6 +2343,8 @@ namespace DocGOST
             const string qtyName = "Qty";
             const string formatName = "Format";
 
+            const string FLAG_NO_VPI = "{{novpi}}";
+
             var subst_map = new Dictionary<string, (string pn, string tu, string manuf)>();
             var report = new List<string>();
 
@@ -2763,6 +2765,7 @@ namespace DocGOST
                 tempPerechen.groupPlural = string.Empty;
                 tempPerechen.isNameUnderlined = false;
                 tempPerechen.note = string.Empty;
+                bool bNoVPI = false;
 
                 for (int j = 0; j < (componentsList[i]).Count; j++) {
                     ComponentProperties prop;
@@ -2774,7 +2777,16 @@ namespace DocGOST
                             case nameName: tempPerechen.name = prop.Text; break;
                             case documName: tempPerechen.docum = prop.Text; break;
                             case manufName: tempPerechen.note = prop.Text; break;
-                            case auxName: tempPerechen.auxNote = prop.Text; break;
+                            case auxName: { 
+                                var pos = prop.Text.IndexOf(FLAG_NO_VPI);
+                                if (pos >= 0) { 
+                                    bNoVPI = true;
+                                    tempPerechen.auxNote = prop.Text.Substring(0, pos) + prop.Text.Substring(pos + FLAG_NO_VPI.Length);
+                                }
+                                else
+                                    tempPerechen.auxNote = prop.Text; 
+                                break;
+                            }
                             //case valueName: {
                             //    if (prop.Text != "")
                             //    tempSpecification.value
@@ -2840,7 +2852,8 @@ namespace DocGOST
 
                     perechenList.Add(tempPerechen);
                     specList.Add(tempSpecification);
-                    vedomostList.Add(tempVedomost);
+                    if (!bNoVPI)
+                        vedomostList.Add(tempVedomost);
                 } /*else {
                     numberOfValidStrings--;
                 }*/
@@ -2860,6 +2873,7 @@ namespace DocGOST
                 tempSpecification.group = String.Empty;
                 tempSpecification.designator = String.Empty;
                 tempSpecification.isNameUnderlined = false;
+                bool bNoVPI = false;
 
                 var litem = othersList[i];
                 for (int j = 0; j < litem.Count; j++) {
@@ -2877,7 +2891,15 @@ namespace DocGOST
                             case manufName: tempVedomost.supplier = prop.Text; break;
                             case nameName: tempSpecification.name = prop.Text; break;
                             case documName: tempSpecification.docum = prop.Text; break;
-                            case auxName: tempSpecification.note = prop.Text; break;
+                            case auxName: {
+                                var pos = prop.Text.IndexOf(FLAG_NO_VPI);
+                                if (pos >= 0) {
+                                    bNoVPI = true;
+                                    tempSpecification.note = prop.Text.Substring(0, pos) + prop.Text.Substring(pos + FLAG_NO_VPI.Length);
+                                } else
+                                    tempSpecification.note = prop.Text;
+                                break;
+                            }
                             case formatName: tempSpecification.format = prop.Text; break;
                         }
                     } catch {
@@ -2904,20 +2926,23 @@ namespace DocGOST
                     tempSpecification.name += " " + tempSpecification.docum;
 
                 // сливаем повторяющиеся материалы/изделия
-                if ( materials_map.TryGetValue((tempVedomost.name, tempVedomost.docum, tempVedomost.note), out var item) && DoubleComma.TryParse(item.si.quantity, out var item_qty) 
-                    && DoubleComma.TryParse(tempSpecification.quantity, out var cur_qty) ) {
-                    item_qty += cur_qty;
-                    item.si.quantity = item_qty.ToStringComma();
-                    item.vi.quantityIzdelie = item.vi.quantityTotal = item.si.quantity;
-                    numberOfValidStrings--;
-                    continue;
-                }
-                else 
-                    materials_map.Add( (tempVedomost.name, tempVedomost.docum, tempVedomost.note), (tempSpecification, tempVedomost) );
+                if (!bNoVPI)
+                    if ( materials_map.TryGetValue((tempVedomost.name, tempVedomost.docum, tempVedomost.note), out var item) && DoubleComma.TryParse(item.si.quantity, out var item_qty) 
+                        && DoubleComma.TryParse(tempSpecification.quantity, out var cur_qty) ) {
+                        item_qty += cur_qty;
+                        item.si.quantity = item_qty.ToStringComma();
+                        item.vi.quantityIzdelie = item.vi.quantityTotal = item.si.quantity;
+                        numberOfValidStrings--;
+                        continue;
+                    }
+                    else 
+                        materials_map.Add( (tempVedomost.name, tempVedomost.docum, tempVedomost.note), (tempSpecification, tempVedomost) );
 
                 specList.Add(tempSpecification);
-                if (tempSpecification.spSection != (int)SpSections.Documentation)
-                    vedomostList.Add(tempVedomost);
+                if (tempSpecification.spSection != (int)SpSections.Documentation) { 
+                    if (!bNoVPI)
+                        vedomostList.Add(tempVedomost);
+                }
                 else
                     tempSpecification.position = "";
             } // for
@@ -3051,8 +3076,9 @@ namespace DocGOST
                 perechenListSorted[i].id = id.makeID(i + 1, perTempSave.GetCurrent());
             for (int i = 0; i < specOtherListSorted.Count; i++) {
                 specOtherListSorted[i].id = id.makeID(i + 1 + (numberOfValidStrings - specOtherListSorted.Count), specTempSave.GetCurrent());
-                vedomostListSorted[i].id = id.makeID(i + 1, vedomostTempSave.GetCurrent());
             }
+            for (int i = 0; i < vedomostListSorted.Count; i++) 
+                vedomostListSorted[i].id = id.makeID(i + 1, vedomostTempSave.GetCurrent());
 
             saveProjectMenuItem.IsEnabled = true;
             undoMenuItem.IsEnabled = true;
