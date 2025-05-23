@@ -2344,6 +2344,7 @@ namespace DocGOST
             const string formatName = "Format";
 
             const string FLAG_NO_VPI = "{{novpi}}";
+            const string FLAG_DEC_N = "{{DecN}}";
 
             var subst_map = new Dictionary<string, (string pn, string tu, string manuf)>();
             var report = new List<string>();
@@ -2366,6 +2367,16 @@ namespace DocGOST
                     rslt[i] = s.Substring(pos + 1).Trim();
                 }
                 return rslt;
+            }
+
+            string ReplaceText(string text, string OldValue, string NewValue, ref bool bFlagPresent) {
+                var pos = text.IndexOf(OldValue);
+                if (pos >= 0) {
+                    bFlagPresent = true;
+                    return text.Substring(0, pos) + NewValue + text.Substring(pos + OldValue.Length);
+                } 
+                else
+                    return text;
             }
 
             (string[] hdr, List<List<ComponentProperties>> comps, List<List<ComponentProperties>> others) LoadOneFile(string fn, int nTimes, bool bCompsNOthers) {
@@ -2777,16 +2788,7 @@ namespace DocGOST
                             case nameName: tempPerechen.name = prop.Text; break;
                             case documName: tempPerechen.docum = prop.Text; break;
                             case manufName: tempPerechen.note = prop.Text; break;
-                            case auxName: { 
-                                var pos = prop.Text.IndexOf(FLAG_NO_VPI);
-                                if (pos >= 0) { 
-                                    bNoVPI = true;
-                                    tempPerechen.auxNote = prop.Text.Substring(0, pos) + prop.Text.Substring(pos + FLAG_NO_VPI.Length);
-                                }
-                                else
-                                    tempPerechen.auxNote = prop.Text; 
-                                break;
-                            }
+                            case auxName: tempPerechen.auxNote = ReplaceText(prop.Text, FLAG_NO_VPI, "", ref bNoVPI); break;
                             //case valueName: {
                             //    if (prop.Text != "")
                             //    tempSpecification.value
@@ -2891,21 +2893,17 @@ namespace DocGOST
                             case manufName: tempVedomost.supplier = prop.Text; break;
                             case nameName: tempSpecification.name = prop.Text; break;
                             case documName: tempSpecification.docum = prop.Text; break;
-                            case auxName: {
-                                var pos = prop.Text.IndexOf(FLAG_NO_VPI);
-                                if (pos >= 0) {
-                                    bNoVPI = true;
-                                    tempSpecification.note = prop.Text.Substring(0, pos) + prop.Text.Substring(pos + FLAG_NO_VPI.Length);
-                                } else
-                                    tempSpecification.note = prop.Text;
-                                break;
-                            }
+                            case auxName: tempSpecification.note = ReplaceText(prop.Text, FLAG_NO_VPI, "", ref bNoVPI); break;
                             case formatName: tempSpecification.format = prop.Text; break;
                         }
                     } catch {
                         report.Add(j.ToString() + "/" + ((othersList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + othersList.Count);
                         //MessageBox.Show(j.ToString() + "/" + ((componentsList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + numberOfStrings);
                     }
+                }
+                if (tempSpecification.spSection == (int)SpSections.Documentation) {
+                    var bDummy = false;
+                    tempSpecification.oboznachenie = ReplaceText(tempSpecification.oboznachenie, FLAG_DEC_N, PrjShifr, ref bDummy);
                 }
 
                 tempVedomost.id = tempSpecification.id;
@@ -2927,13 +2925,15 @@ namespace DocGOST
 
                 // сливаем повторяющиеся материалы/изделия
                 if (!bNoVPI)
-                    if ( materials_map.TryGetValue((tempVedomost.name, tempVedomost.docum, tempVedomost.note), out var item) && DoubleComma.TryParse(item.si.quantity, out var item_qty) 
-                        && DoubleComma.TryParse(tempSpecification.quantity, out var cur_qty) ) {
-                        item_qty += cur_qty;
-                        item.si.quantity = item_qty.ToStringComma();
-                        item.vi.quantityIzdelie = item.vi.quantityTotal = item.si.quantity;
-                        numberOfValidStrings--;
-                        continue;
+                    if ( materials_map.TryGetValue((tempVedomost.name, tempVedomost.docum, tempVedomost.note), out var item) ) {
+                        if ( DoubleComma.TryParse(item.si.quantity, out var item_qty) 
+                            && DoubleComma.TryParse(tempSpecification.quantity, out var cur_qty) ) {
+                            item_qty += cur_qty;
+                            item.si.quantity = item_qty.ToStringComma();
+                            item.vi.quantityIzdelie = item.vi.quantityTotal = item.si.quantity;
+                            numberOfValidStrings--;
+                            continue;
+                        }
                     }
                     else 
                         materials_map.Add( (tempVedomost.name, tempVedomost.docum, tempVedomost.note), (tempSpecification, tempVedomost) );
