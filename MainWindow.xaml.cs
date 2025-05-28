@@ -131,6 +131,7 @@ namespace DocGOST
                         if (exportmode.Contains("P")) chkExportPerechen.IsChecked = true;
                         if (exportmode.Contains("S")) chkExportSpec.IsChecked = true;
                         if (exportmode.Contains("V")) chkExportVedomost.IsChecked = true;
+                        if (exportmode.Contains("i")) addListRegistrCheckBox.IsChecked = true;
                         CreatePdf_Click(null, null);
                     }
                     if (bExit != "") Close();
@@ -653,7 +654,7 @@ namespace DocGOST
 
             SpecificationItem plataSpecItem = new SpecificationItem(); //для хранения записи печатной платы для добавления в раздел "Детали" или "Сборочные единицы" спецификации
 
-            plataSpecItem.position = "Авто";
+            plataSpecItem.position = SpecificationItem.POS_AUTO;
             plataSpecItem.name = "Плата печатная";
             plataSpecItem.quantity = "1";
             int pcbLayersCount = 0;
@@ -1227,7 +1228,7 @@ namespace DocGOST
                     tempPcbSpecItem = new PcbSpecificationItem();
                     tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                     tempPcbSpecItem.format = String.Empty;
-                    tempPcbSpecItem.position = "Авто";
+                    tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                     tempPcbSpecItem.oboznachenie = String.Empty;
                     string name = String.Empty;
                     if (pcbMaterialItem.DielType == 1)
@@ -1252,7 +1253,7 @@ namespace DocGOST
                     tempPcbSpecItem = new PcbSpecificationItem();
                     tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                     tempPcbSpecItem.format = String.Empty;
-                    tempPcbSpecItem.position = "Авто";
+                    tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                     tempPcbSpecItem.oboznachenie = String.Empty;
                     tempPcbSpecItem.name = "Фольга медная толщиной 18 мкм";
                     tempPcbSpecItem.quantity = additionalCopperLayersCount.ToString();
@@ -1558,7 +1559,7 @@ namespace DocGOST
 
             SpecificationItem plataSpecItem = new SpecificationItem(); //для хранения записи печатной платы для добавления в раздел "Детали" или "Сборочные единицы" спецификации
 
-            plataSpecItem.position = "Авто";
+            plataSpecItem.position = SpecificationItem.POS_AUTO;
             plataSpecItem.name = "Плата печатная";
             plataSpecItem.quantity = "1";
             int pcbLayersCount = 0;
@@ -2008,7 +2009,7 @@ namespace DocGOST
                     tempPcbSpecItem = new PcbSpecificationItem();
                     tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                     tempPcbSpecItem.format = String.Empty;
-                    tempPcbSpecItem.position = "Авто";
+                    tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                     tempPcbSpecItem.oboznachenie = String.Empty;
                     string name = String.Empty;
                     if (pcbMaterialItem.DielType == 1)
@@ -2033,7 +2034,7 @@ namespace DocGOST
                     tempPcbSpecItem = new PcbSpecificationItem();
                     tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                     tempPcbSpecItem.format = String.Empty;
-                    tempPcbSpecItem.position = "Авто";
+                    tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                     tempPcbSpecItem.oboznachenie = String.Empty;
                     tempPcbSpecItem.name = "Фольга медная толщиной 18 мкм";
                     tempPcbSpecItem.quantity = additionalCopperLayersCount.ToString();
@@ -2311,6 +2312,19 @@ namespace DocGOST
             }
         }
 
+        public struct CompProperties {
+            public enum Name
+            {
+                designator, name, docum, manuf, aux, section, shifr, qty, format, pos
+            }
+            public Name name;
+            public string text;
+            public CompProperties(Name name, string text) {
+                this.name = name;
+                this.text = text;
+            }
+        }
+
         private void ImportPrjfromMentorCsv(string pcbPrjFile, string SignDate, string OrgName) {
             const int HDR_LINE_CNT = 13;
             const int HDR_PARENT_SHIFR = 0; // индекс строки (0+) в хедере CSV-файла, в которой располагается "Дец. номер схемы"
@@ -2331,17 +2345,6 @@ namespace DocGOST
             const int LINE_PIDX_PN = 6;
             const int LINE_PIDX_TU = 7;
             const int LINE_PIDX_AUX = 8;
-
-            const string designatorName = "Ref Designator";
-            const string nameName = "Part Number";
-            const string documName = "Docum";
-            const string manufName = "Note";
-            //const string valueName = "Value";
-            const string auxName = "Aux";
-            const string sectionName = "Section";
-            const string shifrName = "Shifr";
-            const string qtyName = "Qty";
-            const string formatName = "Format";
 
             const string FLAG_NO_VPI = "{{novpi}}";
             const string FLAG_DEC_N = "{{DecN}}";
@@ -2379,9 +2382,9 @@ namespace DocGOST
                     return text;
             }
 
-            (string[] hdr, List<List<ComponentProperties>> comps, List<List<ComponentProperties>> others) LoadOneFile(string fn, int nTimes, bool bCompsNOthers) {
-                List<List<ComponentProperties>> rslt_list = new List<List<ComponentProperties>>();
-                List<List<ComponentProperties>> oth_list = new List<List<ComponentProperties>>();
+            (string[] hdr, List<List<CompProperties>> comps, List<List<CompProperties>> others) LoadOneFile(string fn, int nTimes, bool bCompsNOthers) {
+                List<List<CompProperties>> rslt_list = new List<List<CompProperties>>();
+                List<List<CompProperties>> oth_list = new List<List<CompProperties>>();
                 string[] hdr_info = null;
                 using (var dataFile = new CsvReader(fn, '\t')) {
                     try {
@@ -2392,9 +2395,9 @@ namespace DocGOST
 
                         while (!dataFile.Eof()) {
                             SA = dataFile.ReadLineAsStrings(LINE_PARAM_CNT);
-                            SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
 
                             if (bCompsNOthers) {
+                                SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
                                 if (SA[LINE_PIDX_VALUE] == "__FILE__") {
                                     string fn2 = SA[LINE_PIDX_PART_NUMBER];
                                     var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), fn2), SA[LINE_PIDX_QTY].ToInt32(1, 999), bCompsNOthers: true);
@@ -2411,13 +2414,13 @@ namespace DocGOST
                                     manufacturer = ptm.manuf;
                                     documPost = ptm.tu;
                                 }
-                                var componentPropList = new List<ComponentProperties>() {
-                                    new ComponentProperties(nameName, partNumber),
-                                    new ComponentProperties(designatorName, SA[LINE_PIDX_REFDES]),
-                                    new ComponentProperties(documName, documPost),
-                                    new ComponentProperties(manufName, manufacturer),
-                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX]),
-                                    //new ComponentProperties(valueName, SA[LINE_PIDX_VALUE])
+                                var componentPropList = new List<CompProperties>() {
+                                    new CompProperties(CompProperties.Name.name, partNumber),
+                                    new CompProperties(CompProperties.Name.designator, SA[LINE_PIDX_REFDES]),
+                                    new CompProperties(CompProperties.Name.docum, documPost),
+                                    new CompProperties(CompProperties.Name.manuf, manufacturer),
+                                    new CompProperties(CompProperties.Name.aux, SA[LINE_PIDX_AUX]),
+                                    //new CompProperties(valueName, SA[LINE_PIDX_VALUE])
                                 };
                                 for (int i = 0; i < nTimes; i++) 
                                     rslt_list.Add(componentPropList);
@@ -2430,15 +2433,16 @@ namespace DocGOST
                                         throw new Exception("Wrong Quantity");
                                 }
 
-                                var componentPropList = new List<ComponentProperties>() {
-                                    new ComponentProperties(sectionName, SA[LINE_PIDX_PART_NUMBER]),
-                                    new ComponentProperties(shifrName, SA[LINE_PIDX_VALUE]),
-                                    new ComponentProperties(qtyName, SA[LINE_PIDX_QTY]),
-                                    new ComponentProperties(manufName, SA[LINE_PIDX_MANUFACTURER]),
-                                    new ComponentProperties(nameName, SA[LINE_PIDX_PN]),
-                                    new ComponentProperties(documName, SA[LINE_PIDX_TU]),
-                                    new ComponentProperties(auxName, SA[LINE_PIDX_AUX]),
-                                    new ComponentProperties(formatName, SA[LINE_PIDX_REFDES])
+                                var componentPropList = new List<CompProperties>() {
+                                    new CompProperties(CompProperties.Name.section, SA[LINE_PIDX_PART_NUMBER]),
+                                    new CompProperties(CompProperties.Name.shifr, SA[LINE_PIDX_VALUE]),
+                                    new CompProperties(CompProperties.Name.qty, SA[LINE_PIDX_QTY]),
+                                    new CompProperties(CompProperties.Name.manuf, SA[LINE_PIDX_MANUFACTURER]),
+                                    new CompProperties(CompProperties.Name.name, SA[LINE_PIDX_PN]),
+                                    new CompProperties(CompProperties.Name.docum, SA[LINE_PIDX_TU]),
+                                    new CompProperties(CompProperties.Name.aux, SA[LINE_PIDX_AUX]),
+                                    new CompProperties(CompProperties.Name.format, SA[LINE_PIDX_REFDES]),
+                                    new CompProperties(CompProperties.Name.pos, SA[LINE_PIDX_N])
                                 };
                                 for (int i = 0; i < nTimes; i++)
                                     oth_list.Add(componentPropList);
@@ -2472,12 +2476,12 @@ namespace DocGOST
 
             #region Открытие и парсинг файлов Mentor
 
-            List<List<ComponentProperties>> componentsList = new List<List<ComponentProperties>>();
-            List<List<ComponentProperties>> othersList = new List<List<ComponentProperties>>();
+            List<List<CompProperties>> componentsList = new List<List<CompProperties>>();
+            List<List<CompProperties>> othersList = new List<List<CompProperties>>();
 
-            List<List<List<ComponentProperties>>> componentsVariantList = new List<List<List<ComponentProperties>>>();
-            List<List<ComponentProperties>> componentsPropVariantList = new List<List<ComponentProperties>>();
-            List<ComponentProperties> componentVariantPropList = new List<ComponentProperties>();
+            List<List<List<CompProperties>>> componentsVariantList = new List<List<List<CompProperties>>>();
+            List<List<CompProperties>> componentsPropVariantList = new List<List<CompProperties>>();
+            List<CompProperties> componentVariantPropList = new List<CompProperties>();
             List<String> variantNameList = new List<String>();
             List<String> dnfDesignatorsList = new List<String>();
             List<List<String>> dnfVariantDesignatorsList = new List<List<String>>();
@@ -2486,11 +2490,13 @@ namespace DocGOST
 
             List<List<string[]>> prjParamsVariantList = new List<List<string[]>>();
 
+            bool bSpecificationConstPosMode = false;
+
 
             variantNameList.Add("No Variations");
             //bool isWaitingVariantDescription = false;
 
-            List<ComponentProperties> otherPropList = new List<ComponentProperties>();
+            List<CompProperties> otherPropList = new List<CompProperties>();
 
             int pcbLayersCount = 2;
 
@@ -2596,7 +2602,7 @@ namespace DocGOST
                 tempPcbSpecItem = new PcbSpecificationItem();
                 tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                 tempPcbSpecItem.format = String.Empty;
-                tempPcbSpecItem.position = "Авто";
+                tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                 tempPcbSpecItem.oboznachenie = String.Empty;
                 string name = String.Empty;
                 if (pcbMaterialItem.DielType == 1) {
@@ -2618,7 +2624,7 @@ namespace DocGOST
                 tempPcbSpecItem = new PcbSpecificationItem();
                 tempPcbSpecItem.id = id.makeID(index, specTempSave.GetCurrent());
                 tempPcbSpecItem.format = String.Empty;
-                tempPcbSpecItem.position = "Авто";
+                tempPcbSpecItem.position = SpecificationItem.POS_AUTO;
                 tempPcbSpecItem.oboznachenie = String.Empty;
                 tempPcbSpecItem.name = "Фольга медная толщиной 18 мкм";
                 tempPcbSpecItem.quantity = additionalCopperLayersCount.ToString();
@@ -2728,19 +2734,19 @@ namespace DocGOST
                 settingsDB.BeginTransaction();
                 try { 
                     propNameItem.name = "designatorPropName";
-                    propNameItem.valueString = designatorName;
+                    propNameItem.valueString = "Ref Designator"; // designatorName;
                     settingsDB.SaveSettingItem(propNameItem);
 
                     propNameItem.name = "namePropName";
-                    propNameItem.valueString = nameName;
+                    propNameItem.valueString = "Part Number"; // nameName;
                     settingsDB.SaveSettingItem(propNameItem);
 
                     propNameItem.name = "documPropName";
-                    propNameItem.valueString = documName;
+                    propNameItem.valueString = "Docum"; // documName;
                     settingsDB.SaveSettingItem(propNameItem);
 
                     propNameItem.name = "notePropName";
-                    propNameItem.valueString = manufName;
+                    propNameItem.valueString = "Note"; // manufName;
                     settingsDB.SaveSettingItem(propNameItem);
                 } finally {
                     settingsDB.Commit();
@@ -2779,16 +2785,16 @@ namespace DocGOST
                 bool bNoVPI = false;
 
                 for (int j = 0; j < (componentsList[i]).Count; j++) {
-                    ComponentProperties prop;
+                    CompProperties prop;
                     try {
                         prop = (componentsList[i])[j];
 
-                        switch (prop.Name) { 
-                            case designatorName: tempPerechen.designator = prop.Text; break;
-                            case nameName: tempPerechen.name = prop.Text; break;
-                            case documName: tempPerechen.docum = prop.Text; break;
-                            case manufName: tempPerechen.note = prop.Text; break;
-                            case auxName: tempPerechen.auxNote = ReplaceText(prop.Text, FLAG_NO_VPI, "", ref bNoVPI); break;
+                        switch (prop.name) { 
+                            case CompProperties.Name.designator: tempPerechen.designator = prop.text; break;
+                            case CompProperties.Name.name: tempPerechen.name = prop.text; break;
+                            case CompProperties.Name.docum: tempPerechen.docum = prop.text; break;
+                            case CompProperties.Name.manuf: tempPerechen.note = prop.text; break;
+                            case CompProperties.Name.aux: tempPerechen.auxNote = ReplaceText(prop.text, FLAG_NO_VPI, "", ref bNoVPI); break;
                             //case valueName: {
                             //    if (prop.Text != "")
                             //    tempSpecification.value
@@ -2871,7 +2877,6 @@ namespace DocGOST
 
                 tempSpecification.id = id.makeID(numberOfValidStrings, perTempSave.GetCurrent());
                 tempSpecification.zona = String.Empty;
-                tempSpecification.position = "Авто";
                 tempSpecification.group = String.Empty;
                 tempSpecification.designator = String.Empty;
                 tempSpecification.isNameUnderlined = false;
@@ -2881,20 +2886,21 @@ namespace DocGOST
                 for (int j = 0; j < litem.Count; j++) {
                     try {
                         var prop = litem[j];
-                        switch (prop.Name) {
-                            case sectionName: 
-                                var sec = Spec_StrToSection[prop.Text];
+                        switch (prop.name) {
+                            case CompProperties.Name.section: 
+                                var sec = Spec_StrToSection[prop.text];
                                 tempSpecification.spSection = (int)sec; 
                                 tempVedomost.group = tempVedomost.groupPlural = sec.FullName(); 
                                 if (tempSpecification.spSection == (int)SpSections.Documentation) bHaveDocAdditionals = true; 
                                 break;
-                            case shifrName: tempSpecification.oboznachenie = prop.Text; break;
-                            case qtyName: tempSpecification.quantity = prop.Text; break;
-                            case manufName: tempVedomost.supplier = prop.Text; break;
-                            case nameName: tempSpecification.name = prop.Text; break;
-                            case documName: tempSpecification.docum = prop.Text; break;
-                            case auxName: tempSpecification.note = ReplaceText(prop.Text, FLAG_NO_VPI, "", ref bNoVPI); break;
-                            case formatName: tempSpecification.format = prop.Text; break;
+                            case CompProperties.Name.shifr: tempSpecification.oboznachenie = prop.text; break;
+                            case CompProperties.Name.qty: tempSpecification.quantity = prop.text; break;
+                            case CompProperties.Name.manuf: tempVedomost.supplier = prop.text; break;
+                            case CompProperties.Name.name: tempSpecification.name = prop.text; break;
+                            case CompProperties.Name.docum: tempSpecification.docum = prop.text; break;
+                            case CompProperties.Name.aux: tempSpecification.note = ReplaceText(prop.text, FLAG_NO_VPI, "", ref bNoVPI); break;
+                            case CompProperties.Name.format: tempSpecification.format = prop.text; break;
+                            case CompProperties.Name.pos: tempSpecification.position = prop.text; break;
                         }
                     } catch {
                         report.Add(j.ToString() + "/" + ((othersList[i]).Capacity - 1).ToString() + ' ' + i.ToString() + "/" + othersList.Count);
@@ -2905,6 +2911,10 @@ namespace DocGOST
                     var bDummy = false;
                     tempSpecification.oboznachenie = ReplaceText(tempSpecification.oboznachenie, FLAG_DEC_N, PrjShifr, ref bDummy);
                 }
+                if (tempSpecification.position == "")
+                    tempSpecification.position = SpecificationItem.POS_AUTO;
+                else
+                    bSpecificationConstPosMode = true;
 
                 tempVedomost.id = tempSpecification.id;
                 tempVedomost.designator = tempSpecification.designator;
@@ -3084,7 +3094,8 @@ namespace DocGOST
             undoMenuItem.IsEnabled = true;
             redoMenuItem.IsEnabled = true;
             #endregion
-            groupByNameSaveAndPrint_v2(hiePerechenBlockList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, vedomostListSorted);
+            groupByNameSaveAndPrint_v2(hiePerechenBlockList, specList.Where(x => x.spSection != ((int)Global.SpSections.Other)).ToList(), specOtherListSorted, 
+                vedomostListSorted, bSpecificationConstPosMode); 
 
             //waitGrid.Visibility = Visibility.Hidden;
             var repfn = Path.ChangeExtension(projectPath, null) + "_report.log";
@@ -3489,7 +3500,7 @@ namespace DocGOST
                 (new PerechenOperations()).groupPerechenElements(ref pData, ref numOfPerechenValidStrings);
 
             if (numOfSpecificationStrings > 1) 
-                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, false, ref numOfSpecificationStrings);
 
             if (numOfVedomostValidStrings > 1)
                 vData = (new VedomostOperations()).groupVedomostElements(vData, ref numOfVedomostValidStrings);
@@ -3497,7 +3508,8 @@ namespace DocGOST
             _SaveAndPrint(pData, sData, sOtherData, vData, numOfPerechenValidStrings, numOfSpecificationStrings, numOfVedomostValidStrings);
         }
 
-        private void groupByNameSaveAndPrint_v2(List<HiePerechenBlock> hiePerechen, List<SpecificationItem> sData, List<SpecificationItem> sOtherData, List<VedomostItem> vData) {
+        private void groupByNameSaveAndPrint_v2(List<HiePerechenBlock> hiePerechen, List<SpecificationItem> sData, List<SpecificationItem> sOtherData,
+                List<VedomostItem> vData, bool bSpecificationConstPosMode) {
 
             int numOfSpecificationStrings = sOtherData.Count;
             int numOfVedomostValidStrings = vData.Count;
@@ -3545,7 +3557,7 @@ namespace DocGOST
             }
 
             if (numOfSpecificationStrings > 1)
-                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, ref numOfSpecificationStrings);
+                sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, bSpecificationConstPosMode, ref numOfSpecificationStrings);
             sData = SpecificationOperations.BreakLongLinesOnly(sData);
 
             if (numOfVedomostValidStrings > 1)

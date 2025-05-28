@@ -23,7 +23,9 @@ using System;
 namespace DocGOST.Data
 {
     class SpecificationItem
-    {        
+    {
+        public static readonly string POS_AUTO = "Авто";
+
         [PrimaryKey, AutoIncrement]
         public int id { get; set; } // Порядковый номер (номер строки с 0-го бита + номер сохранения с 20-го бита)
         public int spSection { get; set; } // Раздел спецификации

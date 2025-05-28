@@ -41,7 +41,8 @@ namespace DocGOST
             return Global.SwapDesignatorGroupAndSelfNum(des);
         }
 
-        static public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, ref int numberOfValidStrings)
+        // Если bConstPosMode=true, то используется такой режим спецификации, в котором в колонке "Поз" уже проставлены и перенумеровывать и менять порядок строк не нужно
+        static public List<SpecificationItem> groupSpecificationElements(List<SpecificationItem> sList, bool bConstPosMode, ref int numberOfValidStrings)
         {
             #region Группировка элементов спецификации из раздела "Прочие" с одинаковым наименованием, которые идут подряд            
             List<SpecificationItem> tempList = new List<SpecificationItem>();
@@ -138,7 +139,7 @@ namespace DocGOST
             tempList = new List<SpecificationItem>();
             tempList = tempList1.OrderBy(x => x.name).ToList();
 
-            foreach (SpecificationItem item in tempList) item.position = "Авто";
+            foreach (SpecificationItem item in tempList) item.position = SpecificationItem.POS_AUTO;
 
             numberOfValidStrings = tempList.Count;
             #endregion

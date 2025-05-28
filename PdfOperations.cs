@@ -1856,7 +1856,10 @@ namespace DocGOST
                             sData[j].position = sData[j].position.Replace(" ", "");
                             if (sData[j].position != String.Empty)
                             {
-                                currentCell.Phrase = new Phrase(position.ToString(), normal);
+                                if (sData[j].position == SpecificationItem.POS_AUTO)
+                                    currentCell.Phrase = new Phrase(position.ToString(), normal);
+                                else
+                                    currentCell.Phrase = new Phrase(sData[j].position.ToString(), normal);
                                 position++;
                             }
                         }
