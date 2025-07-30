@@ -2400,7 +2400,7 @@ namespace DocGOST
                                 SA[LINE_PIDX_N].ToInt32(1, 0x7FFFFFFF); // check
                                 if (SA[LINE_PIDX_VALUE] == "__FILE__") {
                                     string fn2 = SA[LINE_PIDX_PART_NUMBER];
-                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), fn2), SA[LINE_PIDX_QTY].ToInt32(1, 999), bCompsNOthers: true);
+                                    var r = LoadOneFile(Path.Combine(Path.GetDirectoryName(fn), fn2), SA[LINE_PIDX_QTY].ToInt32(1, 999) * nTimes, bCompsNOthers: true);
                                     rslt_list.AddRange(r.comps);
                                     oth_list.AddRange(r.others);
                                     continue;
@@ -3556,7 +3556,7 @@ namespace DocGOST
                 }
             }
 
-            if (numOfSpecificationStrings > 1)
+            if (numOfSpecificationStrings > 1) 
                 sOtherData = SpecificationOperations.groupSpecificationElements(sOtherData, bSpecificationConstPosMode, ref numOfSpecificationStrings);
             sData = SpecificationOperations.BreakLongLinesOnly(sData);
 

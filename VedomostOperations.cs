@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using DocGOST.Data;
 
@@ -62,17 +63,36 @@ namespace DocGOST
 
             VedomostItem tempItem = new VedomostItem();
 
-            for (int i = 0; i < numberOfValidStrings; i++)
             {
-                for (int j = i + 1; j < numberOfValidStrings; j++)
-                    if ((tempList[j].name == tempList[i].name) && (tempList[j].docum == tempList[i].docum) && (tempList[j].name != String.Empty))
-                    {
-                        tempList[i].quantityIzdelie = (int.Parse(tempList[i].quantityIzdelie) + int.Parse(tempList[j].quantityIzdelie)).ToString();
-                        tempList[i].quantityTotal = tempList[i].quantityIzdelie;
-                        tempList[j].name = string.Empty;
-                        tempList[j].note = string.Empty;
-                        tempList[j].auxNote = string.Empty;
+                var sList = new List<VedomostItem>( tempList );
+                sList.Sort((a, b) => {
+                    var rslt = a.name.CompareTo( b.name );
+                    if (rslt != 0) return rslt;
+                    rslt = a.docum.CompareTo(b.docum);
+                    return rslt;
+                });
+                int orig = 0;
+                for ( var i = 1; i < numberOfValidStrings; i++ ) {
+                    if ((sList[orig].name == sList[i].name) && (sList[orig].docum == sList[i].docum) && (sList[orig].name != String.Empty)) { 
+                        sList[orig].quantityIzdelie = (int.Parse(sList[orig].quantityIzdelie) + int.Parse(sList[i].quantityIzdelie)).ToString();
+                        sList[orig].quantityTotal = sList[orig].quantityIzdelie;
+                        sList[i].name = string.Empty;
                     }
+                    else 
+                        orig = i;
+                }
+                //for (int i = 0; i < numberOfValidStrings; i++) // _DVK выполняется слишком долго при большом числе элементов
+                //{
+                //    for (int j = i + 1; j < numberOfValidStrings; j++)
+                //        if ((tempList[j].name == tempList[i].name) && (tempList[j].docum == tempList[i].docum) && (tempList[j].name != String.Empty))
+                //        {
+                //            tempList[i].quantityIzdelie = (int.Parse(tempList[i].quantityIzdelie) + int.Parse(tempList[j].quantityIzdelie)).ToString();
+                //            tempList[i].quantityTotal = tempList[i].quantityIzdelie;
+                //            tempList[j].name = string.Empty;
+                //            tempList[j].note = string.Empty;
+                //            tempList[j].auxNote = string.Empty;
+                //        }
+                //}
             }
             #endregion
 

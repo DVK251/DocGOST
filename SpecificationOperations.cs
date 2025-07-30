@@ -103,18 +103,28 @@ namespace DocGOST
             #endregion
 
             #region Группировка всех элементов спецификации из раздела "Прочие" с одинаковым наименованием
-
-            for (int i = 0; i < numberOfValidStrings; i++)
             {
-                for (int j = i + 1; j < numberOfValidStrings; j++)
-                    if ((tempList[j].name == tempList[i].name) && (tempList[j].name != String.Empty))
-                    {
-                        tempList[i].note += ", " + tempList[j].note;
-                        tempList[i].quantity = (int.Parse(tempList[i].quantity) + int.Parse(tempList[j].quantity)).ToString();
-                        tempList[j].name = String.Empty;
-                    }
+                var sortList = tempList.OrderBy(x => x.name).ToList();
+                int orig = 0;
+                for (var i = 1; i < numberOfValidStrings; i++) {
+                    if ((sortList[orig].name == sortList[i].name) && (sortList[orig].name != String.Empty)) {
+                        sortList[orig].note += ", " + sortList[i].note;
+                        sortList[orig].quantity = (int.Parse(sortList[orig].quantity) + int.Parse(sortList[i].quantity)).ToString();
+                        sortList[i].name = string.Empty;
+                    } else
+                        orig = i;
+                }
+                //for (int i = 0; i < numberOfValidStrings; i++) // _DVK выполняется слишком долго при большом числе элементов
+                //{
+                //    for (int j = i + 1; j < numberOfValidStrings; j++)
+                //        if ((tempList[j].name == tempList[i].name) && (tempList[j].name != String.Empty))
+                //        {
+                //            tempList[i].note += ", " + tempList[j].note;
+                //            tempList[i].quantity = (int.Parse(tempList[i].quantity) + int.Parse(tempList[j].quantity)).ToString();
+                //            tempList[j].name = String.Empty;
+                //        }
+                //}
             }
-
             #endregion
 
             #region Удаление лишних строк и сортировка по алфавиту
