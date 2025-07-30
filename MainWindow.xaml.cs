@@ -128,10 +128,10 @@ namespace DocGOST
                     ImportPrjfromMentor(importfn, signDate, orgname); 
                     exportmode = exportmode.ToUpper();
                     if (exportmode != "") {
-                        if (exportmode.Contains("P")) chkExportPerechen.IsChecked = true;
-                        if (exportmode.Contains("S")) chkExportSpec.IsChecked = true;
-                        if (exportmode.Contains("V")) chkExportVedomost.IsChecked = true;
-                        if (exportmode.Contains("i")) addListRegistrCheckBox.IsChecked = true;
+                        chkExportPerechen.IsChecked = (exportmode.Contains("P"));
+                        chkExportSpec.IsChecked = (exportmode.Contains("S"));
+                        chkExportVedomost.IsChecked = (exportmode.Contains("V"));
+                        addListRegistrCheckBox.IsChecked = (exportmode.Contains("i"));
                         CreatePdf_Click(null, null);
                     }
                     if (bExit != "") Close();
