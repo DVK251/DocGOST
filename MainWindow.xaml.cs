@@ -3448,15 +3448,27 @@ namespace DocGOST
                 vData.Add(project.GetVedomostItem(i, tempNumber));
             }
             using (var writer = new CsvWriter(fileName)) {
-                writer.WriteLine( CsvWriter.MakeStringFromStrings(new string[]{ "Part Number", "Quantity", "Manufacturer", "Note" }) );
+                writer.WriteLine( CsvWriter.MakeStringFromStrings(new string[]{ "Name", "Document", "Manufacturer", "Quantity", "Note" }) );
+                var line = new string[5];
+                bool bPendingLine = false;
                 foreach (var item in vData) {
-                    writer.WriteLine( CsvWriter.MakeStringFromStrings( new string[] {
-                        item.isNameUnderlined ? "#### " + item.name : item.name + item.docum == "" ? "" : " " + item.docum,
-                        item.quantityTotal,  
-                        item.supplier, 
-                        item.auxNote != null ? item.auxNote.Replace("\\n", "  ") : ""
-                    } ) );
+                    if (bPendingLine) 
+                        if (!item.isNameUnderlined && item.name != "" && item.quantityTotal == "") { 
+                            line[0] += line[0].EndsWith("-") ? item.name : " " + item.name;
+                            continue;
+                        }
+                        else {
+                            writer.WriteLine(CsvWriter.MakeStringFromStrings(line));
+                            bPendingLine = false;
+                        }
+                    line[0] = item.isNameUnderlined ? "#### " + item.name : item.name;
+                    line[1] = item.docum;
+                    line[2] = item.supplier;
+                    line[3] = item.quantityTotal;
+                    line[4] = item.auxNote != null ? item.auxNote.Replace("\\n", "  ") : "";
+                    bPendingLine = true;
                 }
+                if (bPendingLine) writer.WriteLine( CsvWriter.MakeStringFromStrings(line) );
             }
         }
 
