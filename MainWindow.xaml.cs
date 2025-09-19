@@ -2404,8 +2404,7 @@ namespace DocGOST
                                     rslt_list.AddRange(r.comps);
                                     oth_list.AddRange(r.others);
                                     continue;
-                                }
-                                SA[LINE_PIDX_QTY].ToInt32(1, 1);
+                                } 
                                 string partNumber = SA[LINE_PIDX_PN] != "" ? SA[LINE_PIDX_PN] : SA[LINE_PIDX_PART_NUMBER];
                                 string manufacturer = SA[LINE_PIDX_MANUFACTURER];
                                 string documPost = SA[LINE_PIDX_TU];
@@ -2422,7 +2421,8 @@ namespace DocGOST
                                     new CompProperties(CompProperties.Name.aux, SA[LINE_PIDX_AUX]),
                                     //new CompProperties(valueName, SA[LINE_PIDX_VALUE])
                                 };
-                                for (int i = 0; i < nTimes; i++) 
+                                var nt = SA[LINE_PIDX_QTY].ToInt32(1, 999) * nTimes;
+                                for (int i = 0; i < nt; i++) 
                                     rslt_list.Add(componentPropList);
                             }
                             else {
